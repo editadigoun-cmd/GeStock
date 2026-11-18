@@ -1,44 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
 import '../../theme/gestock_theme.dart';
 
-class DashboardScreen extends StatefulWidget {
+class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
-
   @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
-}
-
-class _DashboardScreenState extends State<DashboardScreen> {
-  int _tab = 0;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: IndexedStack(
-          index: _tab,
-          children: [
-            _DashboardHome(onNavigate: (index) => setState(() => _tab = index)),
-            const _ComingSoonPage(title: 'Mon stock', subtitle: 'Retrouvez vos produits, niveaux et mouvements.'),
-            const _ComingSoonPage(title: 'Ventes', subtitle: 'Un espace de vente rapide, clair et fiable.'),
-            const _ComingSoonPage(title: 'Plus', subtitle: 'Achats, clients, fournisseurs, finances et rapports.'),
-          ],
-        ),
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _tab,
-        onDestinationSelected: (value) => setState(() => _tab = value),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.grid_view_rounded), label: 'Accueil'),
-          NavigationDestination(icon: Icon(Icons.inventory_2_outlined), label: 'Stock'),
-          NavigationDestination(icon: Icon(Icons.point_of_sale_rounded), label: 'Ventes'),
-          NavigationDestination(icon: Icon(Icons.apps_rounded), label: 'Plus'),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => SafeArea(
+    bottom: false,
+    child: _DashboardHome(onNavigate: (index) {
+      final routes = ['/home', '/products', '/sales', '/inventory'];
+      context.go(routes[index.clamp(0, routes.length - 1)]);
+    }),
+  );
 }
 
 class _DashboardHome extends StatelessWidget {
