@@ -29,3 +29,26 @@ jobs:
         working-directory: backend
       - run: npm run typecheck
         working-directory: backend
+  deploy:
+    needs: backend
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ed1783922fcd87086ef7757e242fc0f2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Deploy GeStock API to Cloudflare
+        if: ${{ env.CLOUDFLARE_API_TOKEN != '' }}
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ env.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: backend
+          command: deploy
+      - name: Explain skipped deployment
+        if: ${{ env.CLOUDFLARE_API_TOKEN == '' }}
+        run: echo "Deployment skipped. Add CLOUDFLARE_API_TOKEN in GitHub Actions secrets to enable deployment."
