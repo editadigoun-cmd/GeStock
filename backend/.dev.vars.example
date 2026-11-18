@@ -1,0 +1,4 @@
+# Local-only values. Copy to .dev.vars; never commit real secrets.
+AUTH_ISSUER=
+AUTH_AUDIENCE=
+AUTH_JWKS_URL=
