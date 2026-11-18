@@ -135,7 +135,7 @@ async function applyOperation(authSubject: string, deviceId: string, op: z.infer
         const [level] = await tx.insert(stockLevels).values({ businessId, warehouseId, productId, quantity: String(delta), updatedAt: new Date() })
           .onConflictDoUpdate({
             target: [stockLevels.warehouseId, stockLevels.productId],
-            set: { quantity: sql`${stockLevels.quantity} + ${String(delta)}`, updatedAt: new Date() },
+            set: { quantity: sql`${stockLevels.quantity} + ${String(delta)}::numeric`, updatedAt: new Date() },
           }).returning({ quantity: stockLevels.quantity });
         if (Number(level.quantity) < 0) throw new Error('INSUFFICIENT_STOCK');
         result = { id: movementId, synced: true, quantity: level.quantity };
