@@ -381,22 +381,3 @@ class _SyncStatus extends StatelessWidget {
   );
 }
 
-class _ComingSoonPage extends StatelessWidget {
-  const _ComingSoonPage({required this.title, required this.subtitle});
-  final String title, subtitle;
-  @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(28),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Container(width: 76, height: 76, decoration: BoxDecoration(color: GeStockColors.emerald.withValues(alpha: .12), borderRadius: BorderRadius.circular(24)), child: const Icon(Icons.auto_awesome_rounded, color: GeStockColors.deepEmerald, size: 34)),
-        const SizedBox(height: 18),
-        Text(title, style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 7),
-        Text(subtitle, textAlign: TextAlign.center, style: const TextStyle(color: GeStockColors.muted, fontSize: 13)),
-        const SizedBox(height: 18),
-        const Text('Module en cours de construction', style: TextStyle(color: GeStockColors.deepEmerald, fontWeight: FontWeight.w800, fontSize: 11)),
-      ]),
-    ),
-  );
-}
