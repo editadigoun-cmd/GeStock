@@ -117,7 +117,7 @@ class _TopBar extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('GeStock', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, letterSpacing: -.7)),
-              Text('MON ESPACE PROFESSIONNEL', style: TextStyle(fontSize: 9, letterSpacing: 1.1, color: GeStockColors.muted, fontWeight: FontWeight.w800)),
+              Text('APERÇU · DONNÉES DE DÉMONSTRATION', style: TextStyle(fontSize: 9, letterSpacing: 1.1, color: GeStockColors.muted, fontWeight: FontWeight.w800)),
             ],
           ),
         ),
