@@ -37,6 +37,7 @@ jobs:
         run: >-
           flutter build apk --release
           --dart-define=GESTOCK_API_URL=https://gestock-api.ccds22431.workers.dev
+          --dart-define=NEON_AUTH_URL=https://gestock-auth-proxy.ccds22431.workers.dev/auth
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
