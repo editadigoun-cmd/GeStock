@@ -7,7 +7,7 @@ class AuthRepository {
             Dio(BaseOptions(
               baseUrl: const String.fromEnvironment(
                 'NEON_AUTH_URL',
-                defaultValue: 'https://ep-holy-boat-banyu93m.neonauth.c-8.eu-central-1.aws.neon.tech/gestock/auth',
+                defaultValue: 'https://gestock-auth-proxy.ccds22431.workers.dev/auth',
               ),
               connectTimeout: const Duration(seconds: 20),
               receiveTimeout: const Duration(seconds: 25),
