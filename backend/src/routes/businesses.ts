@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { and, eq } from 'drizzle-orm';
 import { db } from '../services/db.js';
-import { appUsers, businesses, businessMemberships, organizationMemberships, organizations } from '../schema.js';
+import { appUsers, businesses, businessMemberships, organizationMemberships, organizations, warehouses } from '../schema.js';
 import type { AppEnv } from '../middleware/auth.js';
 export const businessRoutes=new Hono<AppEnv>();
 const schema=z.object({name:z.string().trim().min(1).max(160),business_type:z.string().min(1).max(60),country_code:z.string().length(2),currency_code:z.string().length(3),timezone:z.string().min(1).max(80).default('UTC')});
@@ -21,7 +21,7 @@ businessRoutes.post('/',async(c)=>{
   const [org]=await tx.insert(organizations).values({name:input.name,ownerUserId:user.id}).returning();
   await tx.insert(organizationMemberships).values({organizationId:org.id,userId:user.id,role:'owner',status:'active'});
   const [business]=await tx.insert(businesses).values({organizationId:org.id,name:input.name,businessType:input.business_type,countryCode:input.country_code,currencyCode:input.currency_code,timezone:input.timezone}).returning();
-  await tx.insert(businessMemberships).values({businessId:business.id,userId:user.id,role:'owner',permissions:{all:true},status:'active'});
+  await tx.insert(businessMemberships).values({businessId:business.id,userId:user.id,role:'owner',permissions:{all:true},status:'active'});\n  await tx.insert(warehouses).values({businessId:business.id,name:'Dépôt principal',isDefault:true});
   return business;
  });
  return c.json({data:result},201);
