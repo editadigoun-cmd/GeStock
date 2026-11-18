@@ -1,0 +1,43 @@
+name: Deploy GeStock Admin to Cloudflare Workers
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "admin/**"
+      - ".github/workflows/deploy-gestock-admin.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: admin
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ed1783922fcd87086ef7757e242fc0f2
+      NEON_AUTH_BASE_URL: https://gestock-auth-proxy.ccds22431.workers.dev/auth
+      ADMIN_EMAIL: editadigoun@gmail.com
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: admin/package.json
+      - name: Install current admin dependencies
+        run: npm install
+      - name: Check Next.js compatibility with vinext
+        run: npx --yes vinext check
+      - name: Configure Cloudflare Workers deployment
+        run: npx --yes vinext init --platform=cloudflare --name gestock-admin --cdn-cache=none --data-cache=none --image-optimization=none
+      - name: Build admin application
+        run: npm run build:vinext
+      - name: Deploy admin to Cloudflare Workers
+        run: npx --yes @vinext/cloudflare deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
