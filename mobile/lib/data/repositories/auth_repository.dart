@@ -28,7 +28,7 @@ class AuthRepository {
   if(data is Map&&data['token'] is String)return data['token'] as String;
   throw Exception('Le service n’a pas retourné de jeton API.');
  }
- Future<void> signOut() async {
+ Future<bool> hasValidSession() async {\n  try { await getAccessToken(); return true; } catch (_) { return false; }\n }\n Future<void> signOut() async {
   final cookie=await _storage.read(key:_cookieKey);
   if(cookie!=null){try{await _dio.post('/sign-out',options:Options(headers:{'Cookie':cookie}));}catch{}}
   await _storage.delete(key:_cookieKey);
