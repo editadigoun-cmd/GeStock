@@ -15,7 +15,7 @@ class BusinessRepository {
  Future<void> create({required String name,required String type,required String country,required String currency})async{
   final d=await db.database;final id=_uuid.v4();final warehouseId=_uuid.v4();final now=DateTime.now().toUtc().toIso8601String();
   final zone=switch(country){'BJ'=>'Africa/Porto-Novo','TG'=>'Africa/Lome','CI'=>'Africa/Abidjan','SN'=>'Africa/Dakar','CM'=>'Africa/Douala','FR'=>'Europe/Paris',_=>'UTC'};
-  final payload={'id':id,'name':name.trim(),'business_type':type,'country_code':country,'currency_code':currency,'timezone':zone};
+  final payload={'id':id,'name':name.trim(),'business_type':type,'country_code':country,'currency_code':currency,'timezone':zone,'default_warehouse_id':warehouseId};
   await d.transaction((txn)async{
    await txn.insert('businesses',{...payload,'created_at':now,'sync_state':'pending'});
    await txn.insert('warehouses',{'id':warehouseId,'business_id':id,'name':'Dépôt principal','is_default':1,'created_at':now});
