@@ -143,7 +143,7 @@ class _WelcomePanel extends ConsumerWidget {
               const SizedBox(height:22),
               const Text('Bonjour 👋',style:TextStyle(color:Colors.white70,fontSize:14,fontWeight:FontWeight.w600)),
               const SizedBox(height:3),
-              const Text('Votre activité,\\nen pleine croissance.',style:TextStyle(color:Colors.white,fontSize:25,height:1.15,fontWeight:FontWeight.w900,letterSpacing:-.8)),
+              const Text('Votre activité,\nen pleine croissance.',style:TextStyle(color:Colors.white,fontSize:25,height:1.15,fontWeight:FontWeight.w900,letterSpacing:-.8)),
               const SizedBox(height:18),
               InkWell(
                 onTap:()=>context.go('/businesses'),
