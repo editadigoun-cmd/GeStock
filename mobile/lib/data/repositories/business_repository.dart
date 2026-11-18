@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:uuid/uuid.dart';
+import 'package:sqflite/sqflite.dart';
 import '../local/gestock_database.dart';
 class BusinessRepository {
  BusinessRepository(this.db);
