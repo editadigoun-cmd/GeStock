@@ -3,46 +3,250 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../app/providers.dart';
 import '../../theme/gestock_theme.dart';
+
 class ProductsScreen extends ConsumerStatefulWidget {
- const ProductsScreen({super.key});
- @override ConsumerState<ProductsScreen> createState()=>_ProductsScreenState();
+  const ProductsScreen({super.key});
+  @override
+  ConsumerState<ProductsScreen> createState() => _ProductsScreenState();
 }
-class _ProductsScreenState extends ConsumerState<ProductsScreen>{
- @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('Catalogue produits')),body:FutureBuilder<List<Map<String,Object?>>>(future:ref.read(businessRepositoryProvider).active(),builder:(context,businessSnapshot){
-  if(!businessSnapshot.hasData && businessSnapshot.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());
-  final business=businessSnapshot.data;
-  if(business==null)return _emptyBusiness();
-  final id=business['id'] as String;
-  return Column(children:[
-   Padding(padding:const EdgeInsets.fromLTRB(18,8,18,14),child:Container(padding:const EdgeInsets.all(13),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(15)),child:Row(children:[const Icon(Icons.storefront_outlined,color:GeStockColors.deepEmerald),const SizedBox(width:9),Expanded(child:Text(business['name'].toString(),style:const TextStyle(fontWeight:FontWeight.w800))),Text(business['currency_code'].toString(),style:const TextStyle(color:GeStockColors.muted,fontSize:10,fontWeight:FontWeight.w800))]))),
-   Expanded(child:FutureBuilder<List<Map<String,Object?>>>(future:ref.read(productRepositoryProvider).list(id),builder:(context,snapshot){final rows=snapshot.data??[];if(snapshot.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());if(rows.isEmpty)return _empty();return ListView.separated(padding:const EdgeInsets.symmetric(horizontal:18),itemCount:rows.length,separatorBuilder:(_,__)=>const SizedBox(height:9),itemBuilder:(_,i){final p=rows[i];final q=(p['quantity'] as num?)?.toDouble()??0;final min=(p['min_quantity'] as num?)?.toDouble()??0;final low=q<=min;return Card(child:ListTile(onTap:()=>_adjustStock(business,p),leading:Container(width:44,height:44,decoration:BoxDecoration(color:GeStockColors.emerald.withValues(alpha:.1),borderRadius:BorderRadius.circular(13)),child:const Icon(Icons.inventory_2_outlined,color:GeStockColors.deepEmerald)),title:Text(p['name'].toString(),style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('Réf. '+(p['sku']?.toString()??'—')+' · Stock '+q.toStringAsFixed(0),style:const TextStyle(fontSize:11)),trailing:Column(mainAxisAlignment:MainAxisAlignment.center,crossAxisAlignment:CrossAxisAlignment.end,children:[Text(p['sale_price'].toString()+' F',style:const TextStyle(fontWeight:FontWeight.w900)),Text(low?'Stock bas':'Disponible',style:TextStyle(fontSize:9,color:low?GeStockColors.red:GeStockColors.muted,fontWeight:FontWeight.w700))])));})) ),
-  ]);
- }),floatingActionButton:FloatingActionButton.extended(onPressed:()=>_add(context),icon:const Icon(Icons.add),label:const Text('Nouveau produit')));
 
- Future<void> _adjustStock(Map<String,Object?> business,Map<String,Object?> product)async{
-  final qty=TextEditingController();final note=TextEditingController();bool entry=true;
-  final ok=await showModalBottomSheet<bool>(context:context,isScrollControlled:true,backgroundColor:Colors.transparent,builder:(c)=>StatefulBuilder(builder:(c,setSheet)=>Padding(padding:EdgeInsets.only(bottom:MediaQuery.viewInsetsOf(c).bottom),child:Container(padding:const EdgeInsets.all(22),decoration:const BoxDecoration(color:Colors.white,borderRadius:BorderRadius.vertical(top:Radius.circular(28))),child:Wrap(runSpacing:13,children:[
-   Text('Mouvement · ${product['name']}',style:const TextStyle(fontSize:18,fontWeight:FontWeight.w900)),
-   SegmentedButton<bool>(segments:const [ButtonSegment(value:true,label:Text('Entrée'),icon:Icon(Icons.add_rounded)),ButtonSegment(value:false,label:Text('Sortie'),icon:Icon(Icons.remove_rounded))],selected:{entry},onSelectionChanged:(s){setSheet((){entry=s.first;});}),
-   TextField(controller:qty,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'Quantité')),
-   TextField(controller:note,decoration:const InputDecoration(labelText:'Motif du mouvement')),
-   SizedBox(width:double.infinity,child:FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Enregistrer le mouvement'))),
-  ]))));
-  if(ok==true){
-   final amount=double.tryParse(qty.text.replaceAll(',','.'))??0;
-   try{await ref.read(productRepositoryProvider).adjustStock(businessId:business['id'] as String,productId:product['id'] as String,delta:entry?amount:-amount,note:note.text.trim().isEmpty?(entry?'Entrée de stock':'Sortie de stock'):note.text.trim());if(mounted){setState((){});ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Mouvement enregistré sur cet appareil.')));}}
-   catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.toString().replaceFirst('Bad state: ',''))));}
+class _ProductsScreenState extends ConsumerState<ProductsScreen> {
+  Future<void> _refresh() async {
+    if (mounted) setState(() {});
   }
-  qty.dispose();note.dispose();
- }
 
- Widget _emptyBusiness()=>Center(child:Padding(padding:const EdgeInsets.all(28),child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.storefront_outlined,size:46,color:GeStockColors.muted),const SizedBox(height:12),const Text('Créez d’abord votre entreprise',style:TextStyle(fontWeight:FontWeight.w900)),const SizedBox(height:12),FilledButton(onPressed:()=>context.go('/business/setup'),child:const Text('Créer une entreprise'))])));
- Widget _empty()=>Center(child:Padding(padding:const EdgeInsets.all(28),child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.inventory_2_outlined,size:48,color:GeStockColors.muted),const SizedBox(height:12),const Text('Votre catalogue commence ici',style:TextStyle(fontWeight:FontWeight.w900,fontSize:17)),const SizedBox(height:6),const Text('Ajoutez vos premiers produits pour suivre quantités et prix.',textAlign:TextAlign.center,style:TextStyle(color:GeStockColors.muted,fontSize:12))])));
- Future<void> _add(BuildContext context)async{
-  final business=await ref.read(businessRepositoryProvider).active();if(business==null){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Créez d’abord une entreprise.')));return;}
-  final name=TextEditingController(),sku=TextEditingController(),price=TextEditingController(),qty=TextEditingController(),min=TextEditingController();
-  final ok=await showModalBottomSheet<bool>(context:context,isScrollControlled:true,backgroundColor:Colors.transparent,builder:(c)=>Padding(padding:EdgeInsets.only(bottom:MediaQuery.viewInsetsOf(c).bottom),child:Container(padding:const EdgeInsets.all(22),decoration:const BoxDecoration(color:Colors.white,borderRadius:BorderRadius.vertical(top:Radius.circular(28))),child:Wrap(runSpacing:12,children:[const Text('Nouveau produit',style:TextStyle(fontSize:20,fontWeight:FontWeight.w900)),TextField(controller:name,decoration:const InputDecoration(labelText:'Nom du produit')),TextField(controller:sku,decoration:const InputDecoration(labelText:'Référence / SKU')),Row(children:[Expanded(child:TextField(controller:price,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'Prix de vente'))),const SizedBox(width:10),Expanded(child:TextField(controller:qty,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'Stock initial')))]),TextField(controller:min,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'Seuil d’alerte')),SizedBox(width:double.infinity,child:FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Enregistrer localement')))]))));
-  if(ok==true&&name.text.trim().isNotEmpty){await ref.read(productRepositoryProvider).save(businessId:business['id'] as String,name:name.text,sku:sku.text,salePrice:double.tryParse(price.text)??0,quantity:double.tryParse(qty.text)??0,minQuantity:double.tryParse(min.text)??0);if(mounted)setState((){});}
-  name.dispose();sku.dispose();price.dispose();qty.dispose();min.dispose();
- }
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Catalogue produits')),
+      body: FutureBuilder<Map<String, Object?>?>(
+        future: ref.read(businessRepositoryProvider).active(),
+        builder: (context, businessSnapshot) {
+          if (businessSnapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final business = businessSnapshot.data;
+          if (business == null) return _emptyBusiness();
+          final businessId = business['id'] as String;
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 8, 18, 14),
+                child: Container(
+                  padding: const EdgeInsets.all(13),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15)),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.storefront_outlined, color: GeStockColors.deepEmerald),
+                      const SizedBox(width: 9),
+                      Expanded(child: Text(business['name'].toString(), style: const TextStyle(fontWeight: FontWeight.w800))),
+                      Text(business['currency_code'].toString(), style: const TextStyle(color: GeStockColors.muted, fontSize: 10, fontWeight: FontWeight.w800)),
+                    ],
+                  ),
+                ),
+              ),
+              Expanded(
+                child: FutureBuilder<List<Map<String, Object?>>>(
+                  future: ref.read(productRepositoryProvider).list(businessId),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    final rows = snapshot.data ?? [];
+                    if (rows.isEmpty) return _empty();
+                    return ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 18),
+                      itemCount: rows.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 9),
+                      itemBuilder: (context, index) {
+                        final product = rows[index];
+                        final quantity = (product['quantity'] as num?)?.toDouble() ?? 0;
+                        final minimum = (product['min_quantity'] as num?)?.toDouble() ?? 0;
+                        final low = quantity <= minimum;
+                        return Card(
+                          child: ListTile(
+                            onTap: () => _adjustStock(business, product),
+                            leading: Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(color: GeStockColors.emerald.withValues(alpha: .1), borderRadius: BorderRadius.circular(13)),
+                              child: const Icon(Icons.inventory_2_outlined, color: GeStockColors.deepEmerald),
+                            ),
+                            title: Text(product['name'].toString(), style: const TextStyle(fontWeight: FontWeight.w800)),
+                            subtitle: Text(
+                              'Réf. ${product['sku']?.toString() ?? '—'} · Stock ${quantity.toStringAsFixed(0)}',
+                              style: const TextStyle(fontSize: 11),
+                            ),
+                            trailing: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text('${product['sale_price']} F', style: const TextStyle(fontWeight: FontWeight.w900)),
+                                Text(low ? 'Stock bas' : 'Disponible', style: TextStyle(fontSize: 9, color: low ? GeStockColors.red : GeStockColors.muted, fontWeight: FontWeight.w700)),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _add(context),
+        icon: const Icon(Icons.add),
+        label: const Text('Nouveau produit'),
+      ),
+    );
+  }
+
+  Future<void> _adjustStock(Map<String, Object?> business, Map<String, Object?> product) async {
+    final quantityController = TextEditingController();
+    final noteController = TextEditingController();
+    var entry = true;
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(sheetContext).bottom),
+          child: Container(
+            padding: const EdgeInsets.all(22),
+            decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+            child: Wrap(
+              runSpacing: 13,
+              children: [
+                Text('Mouvement · ${product['name']}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                SegmentedButton<bool>(
+                  segments: const [
+                    ButtonSegment(value: true, label: Text('Entrée'), icon: Icon(Icons.add_rounded)),
+                    ButtonSegment(value: false, label: Text('Sortie'), icon: Icon(Icons.remove_rounded)),
+                  ],
+                  selected: {entry},
+                  onSelectionChanged: (selection) => setSheetState(() => entry = selection.first),
+                ),
+                TextField(controller: quantityController, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Quantité')),
+                TextField(controller: noteController, decoration: const InputDecoration(labelText: 'Motif du mouvement')),
+                SizedBox(width: double.infinity, child: FilledButton(onPressed: () => Navigator.pop(sheetContext, true), child: const Text('Enregistrer le mouvement'))),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (confirmed == true) {
+      final amount = double.tryParse(quantityController.text.replaceAll(',', '.')) ?? 0;
+      try {
+        await ref.read(productRepositoryProvider).adjustStock(
+          businessId: business['id'] as String,
+          productId: product['id'] as String,
+          delta: entry ? amount : -amount,
+          note: noteController.text.trim().isEmpty ? (entry ? 'Entrée de stock' : 'Sortie de stock') : noteController.text.trim(),
+        );
+        if (mounted) {
+          await _refresh();
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mouvement enregistré sur cet appareil.')));
+        }
+      } catch (error) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString().replaceFirst('Bad state: ', ''))));
+      }
+    }
+    quantityController.dispose();
+    noteController.dispose();
+  }
+
+  Widget _emptyBusiness() => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.storefront_outlined, size: 46, color: GeStockColors.muted),
+          const SizedBox(height: 12),
+          const Text('Créez d’abord votre entreprise', style: TextStyle(fontWeight: FontWeight.w900)),
+          const SizedBox(height: 12),
+          FilledButton(onPressed: () => context.go('/business/setup'), child: const Text('Créer une entreprise')),
+        ],
+      ),
+    ),
+  );
+
+  Widget _empty() => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.inventory_2_outlined, size: 48, color: GeStockColors.muted),
+          const SizedBox(height: 12),
+          const Text('Votre catalogue commence ici', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
+          const SizedBox(height: 6),
+          const Text('Ajoutez vos premiers produits pour suivre quantités et prix.', textAlign: TextAlign.center, style: TextStyle(color: GeStockColors.muted, fontSize: 12)),
+        ],
+      ),
+    ),
+  );
+
+  Future<void> _add(BuildContext context) async {
+    final business = await ref.read(businessRepositoryProvider).active();
+    if (business == null) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Créez d’abord une entreprise.')));
+      return;
+    }
+    final name = TextEditingController();
+    final sku = TextEditingController();
+    final price = TextEditingController();
+    final quantity = TextEditingController();
+    final minimum = TextEditingController();
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(sheetContext).bottom),
+        child: Container(
+          padding: const EdgeInsets.all(22),
+          decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+          child: Wrap(
+            runSpacing: 12,
+            children: [
+              const Text('Nouveau produit', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+              TextField(controller: name, decoration: const InputDecoration(labelText: 'Nom du produit')),
+              TextField(controller: sku, decoration: const InputDecoration(labelText: 'Référence / SKU')),
+              Row(
+                children: [
+                  Expanded(child: TextField(controller: price, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Prix de vente'))),
+                  const SizedBox(width: 10),
+                  Expanded(child: TextField(controller: quantity, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Stock initial'))),
+                ],
+              ),
+              TextField(controller: minimum, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Seuil d’alerte')),
+              SizedBox(width: double.infinity, child: FilledButton(onPressed: () => Navigator.pop(sheetContext, true), child: const Text('Enregistrer localement'))),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (confirmed == true && name.text.trim().isNotEmpty) {
+      await ref.read(productRepositoryProvider).save(
+        businessId: business['id'] as String,
+        name: name.text,
+        sku: sku.text,
+        salePrice: double.tryParse(price.text.replaceAll(',', '.')) ?? 0,
+        quantity: double.tryParse(quantity.text.replaceAll(',', '.')) ?? 0,
+        minQuantity: double.tryParse(minimum.text.replaceAll(',', '.')) ?? 0,
+      );
+      if (mounted) setState(() {});
+    }
+    name.dispose();
+    sku.dispose();
+    price.dispose();
+    quantity.dispose();
+    minimum.dispose();
+  }
 }
