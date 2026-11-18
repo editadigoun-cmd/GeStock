@@ -10,6 +10,10 @@
     "logs": { "enabled": true, "invocation_logs": true, "head_sampling_rate": 1 },
     "traces": { "enabled": true, "head_sampling_rate": 0.1 }
   },
+  "vars": {
+    "AUTH_ISSUER": "https://ep-holy-boat-banyu93m.neonauth.c-8.eu-central-1.aws.neon.tech/gestock/auth",
+    "AUTH_JWKS_URL": "https://ep-holy-boat-banyu93m.neonauth.c-8.eu-central-1.aws.neon.tech/gestock/auth/.well-known/jwks.json"
+  },
   "hyperdrive": [
     { "binding": "HYPERDRIVE", "id": "357ce85f0f35412586994aa53a3acdf0" }
   ]
