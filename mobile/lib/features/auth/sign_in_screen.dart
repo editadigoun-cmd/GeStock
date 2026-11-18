@@ -11,7 +11,7 @@ class SignInScreen extends ConsumerStatefulWidget {
 }
 class _SignInScreenState extends ConsumerState<SignInScreen>{
  final email=TextEditingController(),password=TextEditingController();bool obscure=true,busy=false;
- @override void dispose(){email.dispose();password.dispose();super.dispose();}
+ @override void initState(){super.initState();_restoreSession();}\n Future<void> _restoreSession()async{final valid=await ref.read(authRepositoryProvider).hasValidSession();if(!mounted||!valid)return;final businesses=await ref.read(businessRepositoryProvider).list();if(!mounted)return;context.go(businesses.isEmpty?'/business/setup':'/home');}\n @override void dispose(){email.dispose();password.dispose();super.dispose();}
  @override Widget build(BuildContext context)=>Scaffold(body:Stack(children:[
   Container(decoration:const BoxDecoration(gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[Color(0xFF063C35),Color(0xFF071D1A),Color(0xFF101C1A)]))),
   Positioned(top:-80,right:-60,child:_orb(230,GeStockColors.emerald.withValues(alpha:.15))),
