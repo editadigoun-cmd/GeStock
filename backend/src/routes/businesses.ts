@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { db } from '../services/db.js';
 import { appUsers, businesses, businessMemberships, organizationMemberships, organizations } from '../schema.js';
 import type { AppEnv } from '../middleware/auth.js';
@@ -9,7 +9,7 @@ const schema=z.object({name:z.string().trim().min(1).max(160),business_type:z.st
 businessRoutes.get('/',async(c)=>{
  const user=await db.select({id:appUsers.id}).from(appUsers).where(eq(appUsers.authSubject,c.get('userId'))).limit(1);
  if(!user.length)return c.json({data:[]});
- const rows=await db.select({id:businesses.id,name:businesses.name,businessType:businesses.businessType,countryCode:businesses.countryCode,currencyCode:businesses.currencyCode}).from(businesses).innerJoin(businessMemberships,eq(businessMemberships.businessId,businesses.id)).where(eq(businessMemberships.userId,user[0].id));
+ const rows=await db.select({id:businesses.id,name:businesses.name,businessType:businesses.businessType,countryCode:businesses.countryCode,currencyCode:businesses.currencyCode}).from(businesses).innerJoin(businessMemberships,eq(businessMemberships.businessId,businesses.id)).where(and(eq(businessMemberships.userId,user[0].id),eq(businessMemberships.status,'active')));
  return c.json({data:rows});
 });
 businessRoutes.post('/',async(c)=>{
