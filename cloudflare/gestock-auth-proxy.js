@@ -12,6 +12,31 @@ async function handle(request) {
     });
   }
 
+  if (incoming.pathname === "/health/upstream") {
+    try {
+      const response = await fetch(UPSTREAM + "/get-session", { headers: { "Accept": "application/json" } });
+      return new Response(JSON.stringify({
+        service: "gestock-auth-proxy",
+        proxy: "ok",
+        neonAuthReachable: response.status < 500,
+        neonAuthStatus: response.status
+      }), {
+        status: 200,
+        headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
+      });
+    } catch (error) {
+      return new Response(JSON.stringify({
+        service: "gestock-auth-proxy",
+        proxy: "ok",
+        neonAuthReachable: false,
+        error: String(error)
+      }), {
+        status: 502,
+        headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
+      });
+    }
+  }
+
   if (incoming.pathname !== "/auth" && !incoming.pathname.startsWith("/auth/")) {
     return new Response(JSON.stringify({ error: "Not found" }), {
       status: 404,
