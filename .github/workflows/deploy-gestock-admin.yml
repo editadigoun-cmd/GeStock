@@ -27,8 +27,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: admin/package.json
       - name: Install current admin dependencies
         run: npm install
       - name: Check Next.js compatibility with vinext
