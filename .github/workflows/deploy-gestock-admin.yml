@@ -41,3 +41,7 @@ jobs:
         run: npx --yes @vinext/cloudflare deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      - name: Configure Neon Auth runtime binding
+        run: printf '%s' "$NEON_AUTH_BASE_URL" | npx --yes wrangler secret put NEON_AUTH_BASE_URL --name gestock-admin
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
