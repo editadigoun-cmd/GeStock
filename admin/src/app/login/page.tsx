@@ -12,8 +12,9 @@ export default function Login(){
    const endpoint=creating?"/api/auth/sign-up/email":"/api/auth/sign-in/email";
    const payload=creating?{name:"Administrateur GeStock",email:ADMIN_EMAIL,password}:{email:ADMIN_EMAIL,password};
    const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},credentials:"include",body:JSON.stringify(payload)});
-   const result=await r.json().catch(()=>({}));
-   if(!r.ok)throw new Error(result?.message||result?.error|| (creating?"Création du compte impossible.":"Connexion refusée. Vérifie ton mot de passe."));
+   const raw=await r.text();
+   let result:any={}; try{result=raw?JSON.parse(raw):{};}catch{}
+   if(!r.ok){const detail=result?.message||result?.error||result?.code||raw.slice(0,180)||"Réponse vide du serveur";throw new Error(`${creating?"Création refusée":"Connexion refusée"} (HTTP ${r.status}) : ${detail}`);}
    const s=await fetch("/api/auth/get-session",{credentials:"include",cache:"no-store"});
    const d=await s.json();
    if((d?.user?.email||"").toLowerCase()!==ADMIN_EMAIL)throw new Error(creating?"Compte créé. Connecte-toi avec ton mot de passe.":"Session non reconnue. Réessaie.");
