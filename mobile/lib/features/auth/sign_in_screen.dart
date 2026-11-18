@@ -100,19 +100,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 34),
-                        Text(
-                          _isSignUp ? 'Créez votre espace de travail.' : 'Pilotez votre activité.\nEn toute maîtrise.',
-                          style: const TextStyle(color: Colors.white, fontSize: 32, height: 1.08, fontWeight: FontWeight.w900, letterSpacing: -1.1),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          _isSignUp
-                              ? 'Un compte sécurisé pour centraliser votre entreprise.'
-                              : 'Stocks, ventes et gestion. Tout au même endroit.',
-                          style: const TextStyle(color: Color(0xFFB6D1C9), fontSize: 14, height: 1.45),
-                        ),
-                        const SizedBox(height: 28),
+                        const SizedBox(height: 24),
                         Container(
                           padding: const EdgeInsets.all(22),
                           decoration: BoxDecoration(
