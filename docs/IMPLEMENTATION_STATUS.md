@@ -1,29 +1,33 @@
 # GeStock implementation status
 
-## Delivered in this pass
-- Flutter navigation shell and Emerald Intelligence design tokens.
-- Sign-in and sign-up screens wired to the Neon Managed Auth REST endpoints.
-- Neon Managed Auth provisioned on the GeStock main branch; email/password is enabled.
-- Local SQLite database for business workspaces, products and a durable outbox.
-- Local repositories for business and product creation.
-- Product catalogue, inventory and sales module surfaces.
-- Hono API scaffold with JWT verification, business creation/listing, membership-scoped product routes and a transactional stock movement endpoint.
-- Drizzle schema mappings for app users, organizations, business memberships, products and sync operations.
-- GitHub Actions workflow for Flutter analysis/tests and backend type checking.
+## Completed in this pass
+- Flutter sign-in/sign-up screens connected to the Neon Managed Auth REST endpoints.
+- Auth cookie stored with platform secure storage; startup attempts to restore a session using the Managed Auth token endpoint.
+- Local SQLite v2 with additive migration for warehouses and stock movement history.
+- Business creation creates a local workspace and its default warehouse in one local transaction.
+- Multi-business list and active-workspace switcher are accessible from bottom navigation and dashboard.
+- Product catalogue uses the active workspace and supports local product creation.
+- Product initial stock is recorded as an opening movement.
+- Product stock entry/exit operations update local quantities and append immutable local movement records plus outbox events.
+- Product screen is now the main inventory screen; dashboard no longer falsely reports cloud sync as complete.
+- Neon Managed Auth is enabled on the GeStock main branch; email/password sign-up is enabled.
+- Hono API has JWT middleware, business creation/listing, membership-scoped product endpoints, and a transactional stock movement endpoint.
+- New business API creation provisions an initial warehouse.
+- GitHub Actions workflow configured for Flutter analyze/test and backend typecheck.
 
-## Important production gates
-- Neon Auth is enabled, but production SMTP, trusted origins and JWT issuer/audience settings still need verification.
-- Flutter login cookie persistence and JWT retrieval must be tested against real Android and iOS builds.
-- API deployment and secret configuration are not done. Do not publish the API until issuer, audience, JWKS URL and database connection are set.
-- Server synchronization is intentionally disabled (501) until device registration, membership validation, idempotent processing and conflict resolution are complete. The local outbox is durable but not yet uploaded.
-- Stock movement ledger, transactional POS, payment provider integration, returns, receipts and complete reporting are not implemented.
-- Product records are saved locally; the mobile app is not yet connected to a cloud sync worker.
-- Flutter analysis, tests, API typecheck and device builds have not run in this environment. GitHub Actions is configured to run the checks on main.
+## Not yet verified / not production-ready
+- No Android/iOS build or Flutter analyze/test result has been obtained in this environment.
+- Managed Auth REST cookie/token behavior still needs real-device verification. Production email delivery requires custom SMTP and production trusted origins.
+- Business creation and product/stock writes currently persist locally first. The mobile outbox is durable, but a complete authenticated sync worker and server-side operation processor are not yet enabled.
+- The sync API intentionally returns 501 until device registration, idempotent domain processing and conflict resolution are completed.
+- The API has not been deployed; production database URL, Auth issuer/audience/JWKS settings and allowed app origins are not configured.
+- Dashboard financial KPIs remain clearly marked as demonstration data.
+- POS transactions, cash sessions, purchase workflows, returns, payments, receipts, expenses, reporting and staff permissions remain to be implemented.
 
-## Next gates
-1. Verify Managed Auth REST cookie/token flow on Android and iOS and configure production email delivery.
-2. Complete device registration and outbox synchronization with idempotent domain transactions.
-3. Implement stock ledger and transaction-safe stock level updates.
-4. Complete POS, cash sessions, returns and receipt generation.
-5. Add workspace switching, roles and permission management.
-6. Run offline end-to-end tests and prepare Play Store / App Store builds.
+## Next development gates
+1. Verify login/session restoration on Android and iOS.
+2. Implement device registration and idempotent business/product/stock outbox synchronization.
+3. Implement full stock ledger querying, warehouse switching and inventory count workflows.
+4. Build transactional POS, payments, cash sessions, returns and receipts.
+5. Replace demo dashboard KPIs with real local/cloud aggregates.
+6. Add end-to-end offline/reconnect tests and produce signed Play Store/App Store builds.
