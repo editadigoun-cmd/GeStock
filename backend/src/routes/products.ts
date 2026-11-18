@@ -1,13 +1,14 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { db } from '../services/db.js';
-import { products } from '../schema.js';
 import { and, eq, ilike } from 'drizzle-orm';
-type Vars={userId:string};
-export const productRoutes=new Hono<{Variables:Vars}>();
+import { db } from '../services/db.js';
+import { hasBusinessAccess } from '../services/access.js';
+import { products } from '../schema.js';
+import type { AppEnv } from '../middleware/auth.js';
+export const productRoutes=new Hono<AppEnv>();
 productRoutes.get('/',async(c)=>{
  const businessId=c.req.query('business_id');if(!businessId)return c.json({error:'BUSINESS_REQUIRED'},400);
- // Membership enforcement must be added before public deployment.
+ if(!await hasBusinessAccess(c.get('userId'),businessId))return c.json({error:'FORBIDDEN'},403);
  const rows=await db.select().from(products).where(and(eq(products.businessId,businessId),ilike(products.name,'%'+(c.req.query('q')??'')+'%'))).limit(100);
  return c.json({data:rows});
 });
@@ -15,6 +16,7 @@ const createSchema=z.object({business_id:z.string().uuid(),name:z.string().trim(
 productRoutes.post('/',async(c)=>{
  const parsed=createSchema.safeParse(await c.req.json());if(!parsed.success)return c.json({error:'VALIDATION_ERROR',details:parsed.error.flatten()},422);
  const {business_id,...d}=parsed.data;
+ if(!await hasBusinessAccess(c.get('userId'),business_id))return c.json({error:'FORBIDDEN'},403);
  const [row]=await db.insert(products).values({businessId:business_id,name:d.name,sku:d.sku,barcode:d.barcode,unit:d.unit,purchasePrice:String(d.purchase_price),salePrice:String(d.sale_price),taxRate:String(d.tax_rate)}).returning();
  return c.json({data:row},201);
 });
