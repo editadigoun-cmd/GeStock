@@ -33,6 +33,8 @@ jobs:
         run: npx --yes vinext check
       - name: Configure Cloudflare Workers deployment
         run: npx --yes vinext init --platform=cloudflare --name gestock-admin --cdn-cache=none --data-cache=none --image-optimization=none
+      - name: Upgrade Cloudflare Vite plugin for Build Output v1
+        run: npm install --no-save @cloudflare/vite-plugin@rc
       - name: Build admin application
         run: npm run build:vinext
       - name: Deploy admin to Cloudflare Workers
