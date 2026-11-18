@@ -148,6 +148,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
           delta: entry ? amount : -amount,
           note: noteController.text.trim().isEmpty ? (entry ? 'Entrée de stock' : 'Sortie de stock') : noteController.text.trim(),
         );
+        try { await ref.read(syncServiceProvider).syncPending(); } catch (_) {}
         if (mounted) {
           await _refresh();
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mouvement enregistré sur cet appareil.')));
@@ -241,6 +242,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
         quantity: double.tryParse(quantity.text.replaceAll(',', '.')) ?? 0,
         minQuantity: double.tryParse(minimum.text.replaceAll(',', '.')) ?? 0,
       );
+      try { await ref.read(syncServiceProvider).syncPending(); } catch (_) {}
       if (mounted) setState(() {});
     }
     name.dispose();
