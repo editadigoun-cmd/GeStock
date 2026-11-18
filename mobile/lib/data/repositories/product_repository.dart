@@ -13,8 +13,8 @@ class ProductRepository {
   final payload={'id':id,'business_id':businessId,'name':name.trim(),'sku':sku.trim().isEmpty?null:sku.trim(),'sale_price':salePrice,'quantity':quantity,'min_quantity':minQuantity,'updated_at':now};
   await d.transaction((txn)async{
    await txn.insert('products',{...payload,'unit':'unité','purchase_price':0,'sync_state':'pending'});
-   if(quantity>0){final movementId=_uuid.v4();await txn.insert('stock_movements',{'id':movementId,'business_id':businessId,'warehouse_id':warehouseId,'product_id':id,'movement_type':'opening','quantity_delta':quantity,'note':'Stock initial','occurred_at':now});await txn.insert('outbox',{'id':_uuid.v4(),'business_id':businessId,'entity_type':'stock_movement','entity_id':movementId,'operation':'create','payload':jsonEncode({'id':movementId,'business_id':businessId,'warehouse_id':warehouseId,'product_id':id,'movement_type':'opening','quantity_delta':quantity,'note':'Stock initial','occurred_at':now}),'created_at':now});}
    await txn.insert('outbox',{'id':_uuid.v4(),'business_id':businessId,'entity_type':'product','entity_id':id,'operation':'upsert','payload':jsonEncode(payload),'created_at':now});
+   if(quantity>0){final movementId=_uuid.v4();await txn.insert('stock_movements',{'id':movementId,'business_id':businessId,'warehouse_id':warehouseId,'product_id':id,'movement_type':'opening','quantity_delta':quantity,'note':'Stock initial','occurred_at':now});await txn.insert('outbox',{'id':_uuid.v4(),'business_id':businessId,'entity_type':'stock_movement','entity_id':movementId,'operation':'create','payload':jsonEncode({'id':movementId,'business_id':businessId,'warehouse_id':warehouseId,'product_id':id,'movement_type':'opening','quantity_delta':quantity,'note':'Stock initial','occurred_at':now}),'created_at':now});}
   });
  }
  Future<void> adjustStock({required String businessId,required String productId,required double delta,required String note})async{
