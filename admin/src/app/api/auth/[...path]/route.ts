@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-const base = process.env.NEON_AUTH_BASE_URL;
+import { env } from "cloudflare:workers";
+
 async function proxy(req: NextRequest, context: { params: Promise<{path:string[]}> }) {
+ const base = (env as unknown as { NEON_AUTH_BASE_URL?: string }).NEON_AUTH_BASE_URL;
  if (!base) return NextResponse.json({error:"AUTH_NOT_CONFIGURED"},{status:503});
  const {path}=await context.params; const url=new URL(path.join("/"),base.endsWith("/")?base:base+"/"); url.search=req.nextUrl.search;
  const headers=new Headers(req.headers); headers.delete("host"); headers.delete("content-length");
