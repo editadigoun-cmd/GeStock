@@ -1,0 +1,17 @@
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
+import { logger } from 'hono/logger';
+import { serve } from '@hono/node-server';
+import { authGuard } from './middleware/auth.js';
+import { productRoutes } from './routes/products.js';
+import { syncRoutes } from './routes/sync.js';
+const app=new Hono();
+app.use('*',logger());
+app.use('/v1/*',cors({origin:(origin)=>origin,allowHeaders:['Authorization','Content-Type'],allowMethods:['GET','POST','PATCH','DELETE','OPTIONS'],credentials:true}));
+app.get('/health',(c)=>c.json({ok:true,service:'gestock-api',version:'0.1.0'}));
+app.use('/v1/*',authGuard);
+app.route('/v1/products',productRoutes);app.route('/v1/sync',syncRoutes);
+app.notFound((c)=>c.json({error:'NOT_FOUND'},404));
+app.onError((error,c)=>{console.error(error);return c.json({error:'INTERNAL_ERROR',message:'Une erreur interne est survenue.'},500);});
+const port=Number(process.env.PORT??8787);serve({fetch:app.fetch,port});
+console.log('GeStock API listening on port '+port);
