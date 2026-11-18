@@ -4,13 +4,13 @@ The API runs as a Cloudflare Worker, uses Hono for routing, Neon PostgreSQL thro
 
 ## Cloudflare setup
 
-1. In Cloudflare > Workers & Pages > Hyperdrive, create a configuration named `gestock-neon-postgres` pointing to the existing Neon project database `gestock` on branch `main`.
-2. Disable Hyperdrive query caching: GeStock performs writes and transactional sync batches.
-3. Replace the placeholder `hyperdrive[0].id` in `wrangler.jsonc` with the created Hyperdrive ID.
-4. Add these Worker secrets in Settings > Variables and Secrets: `AUTH_ISSUER`, `AUTH_AUDIENCE`, `AUTH_JWKS_URL`.
-5. Deploy from this directory with `npm install && npm run deploy`.
+1. Create the Hyperdrive configuration `gestock-neon-main` for the existing Neon database `gestock` on branch `main`.
+2. Keep Hyperdrive query caching disabled.
+3. The Hyperdrive ID and Neon Auth issuer/JWKS URL are configured in `wrangler.jsonc`.
+4. In GitHub repository Settings > Secrets and variables > Actions, add `CLOUDFLARE_API_TOKEN` with a Cloudflare API token that can deploy Workers scripts.
+5. A push to `main` runs type checks and then deploys the API to Cloudflare. Without the secret, deployment is skipped.
 
-Never put Neon credentials or auth secrets in Git. Hyperdrive owns the database credentials; the Worker receives only its binding.
+Never put Neon database credentials or API tokens in Git. Hyperdrive owns the database credentials; the Worker receives only its binding.
 
 ## Health check and mobile
 
