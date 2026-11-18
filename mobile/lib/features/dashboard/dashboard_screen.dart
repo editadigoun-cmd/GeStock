@@ -10,7 +10,7 @@ class DashboardScreen extends StatelessWidget {
     bottom: false,
     child: _DashboardHome(onNavigate: (index) {
       final routes = ['/home', '/products', '/sales', '/inventory'];
-      context.go(routes[index.clamp(0, routes.length - 1)]);
+      context.go(routes[index.clamp(0, routes.length - 1).toInt()]);
     }),
   );
 }
