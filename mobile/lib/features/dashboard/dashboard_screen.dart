@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../app/providers.dart';
 import '../../theme/gestock_theme.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -117,49 +119,47 @@ class _TopBar extends StatelessWidget {
   }
 }
 
-class _WelcomePanel extends StatelessWidget {
+class _WelcomePanel extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(21),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(27),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF075446), Color(0xFF063C35), Color(0xFF092C29)],
-        ),
-        boxShadow: [BoxShadow(color: GeStockColors.deepEmerald.withValues(alpha: .18), blurRadius: 25, offset: const Offset(0, 12))],
-      ),
-      child: Stack(
-        children: [
-          Positioned(right: -18, top: -25, child: Icon(Icons.blur_on_rounded, size: 150, color: Colors.white.withValues(alpha: .055))),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: [
-                Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), decoration: BoxDecoration(color: Colors.white.withValues(alpha: .12), borderRadius: BorderRadius.circular(30)), child: const Row(children: [Icon(Icons.circle, color: GeStockColors.mint, size: 7), SizedBox(width: 6), Text('ESPACE ACTIF', style: TextStyle(color: Colors.white, fontSize: 9, letterSpacing: 1, fontWeight: FontWeight.w800))])),
-                const Spacer(),
-                const Icon(Icons.more_horiz_rounded, color: Colors.white70),
-              ]),
-              const SizedBox(height: 22),
-              const Text('Bonjour 👋', style: TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 3),
-              const Text('Votre activité,
-en pleine croissance.', style: TextStyle(color: Colors.white, fontSize: 25, height: 1.15, fontWeight: FontWeight.w900, letterSpacing: -.8)),
-              const SizedBox(height: 18),
-              Row(children: [
-                const Icon(Icons.storefront_rounded, color: GeStockColors.mint, size: 16),
-                const SizedBox(width: 7),
-                const Text('Mon entreprise', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
-                const Spacer(),
-                Text('Changer', style: TextStyle(color: GeStockColors.mint.withValues(alpha: .95), fontSize: 11, fontWeight: FontWeight.w800)),
-                const Icon(Icons.chevron_right_rounded, color: GeStockColors.mint, size: 17),
-              ]),
-            ],
+  Widget build(BuildContext context, WidgetRef ref) {
+    return FutureBuilder<Map<String,Object?>?>(
+      future: ref.read(businessRepositoryProvider).active(),
+      builder: (context,snapshot) {
+        final business=snapshot.data;
+        return Container(
+          padding: const EdgeInsets.all(21),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(27),
+            gradient: const LinearGradient(begin: Alignment.topLeft,end: Alignment.bottomRight,colors: [Color(0xFF075446),Color(0xFF063C35),Color(0xFF092C29)]),
+            boxShadow: [BoxShadow(color: GeStockColors.deepEmerald.withValues(alpha: .18),blurRadius: 25,offset: const Offset(0,12))],
           ),
-        ],
-      ),
+          child: Stack(children: [
+            Positioned(right: -18,top: -25,child: Icon(Icons.blur_on_rounded,size: 150,color: Colors.white.withValues(alpha: .055))),
+            Column(crossAxisAlignment: CrossAxisAlignment.start,children: [
+              Row(children: [
+                Container(padding: const EdgeInsets.symmetric(horizontal:10,vertical:6),decoration: BoxDecoration(color:Colors.white.withValues(alpha:.12),borderRadius:BorderRadius.circular(30)),child:const Row(children:[Icon(Icons.circle,color:GeStockColors.mint,size:7),SizedBox(width:6),Text('ESPACE ACTIF',style:TextStyle(color:Colors.white,fontSize:9,letterSpacing:1,fontWeight:FontWeight.w800))])),
+                const Spacer(),const Icon(Icons.more_horiz_rounded,color:Colors.white70),
+              ]),
+              const SizedBox(height:22),
+              const Text('Bonjour 👋',style:TextStyle(color:Colors.white70,fontSize:14,fontWeight:FontWeight.w600)),
+              const SizedBox(height:3),
+              const Text('Votre activité,\\nen pleine croissance.',style:TextStyle(color:Colors.white,fontSize:25,height:1.15,fontWeight:FontWeight.w900,letterSpacing:-.8)),
+              const SizedBox(height:18),
+              InkWell(
+                onTap:()=>context.go('/businesses'),
+                borderRadius:BorderRadius.circular(12),
+                child:Padding(padding:const EdgeInsets.symmetric(vertical:5),child:Row(children:[
+                  const Icon(Icons.storefront_rounded,color:GeStockColors.mint,size:16),
+                  const SizedBox(width:7),
+                  Expanded(child:Text(business?['name']?.toString()??'Aucune entreprise créée',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:12,fontWeight:FontWeight.w700))),
+                  Text('Changer',style:TextStyle(color:GeStockColors.mint.withValues(alpha:.95),fontSize:11,fontWeight:FontWeight.w800)),
+                  const Icon(Icons.chevron_right_rounded,color:GeStockColors.mint,size:17),
+                ])),
+              ),
+            ]),
+          ]),
+        );
+      },
     );
   }
 }
