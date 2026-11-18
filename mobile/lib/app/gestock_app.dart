@@ -5,7 +5,6 @@ import '../features/auth/sign_in_screen.dart';
 import '../features/business/business_setup_screen.dart';
 import '../features/business/businesses_screen.dart';
 import '../features/dashboard/dashboard_screen.dart';
-import '../features/inventory/inventory_screen.dart';
 import '../features/products/products_screen.dart';
 import '../features/sales/sales_screen.dart';
 import '../features/shell/app_shell.dart';
