@@ -23,7 +23,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen>{
   final qty=TextEditingController();final note=TextEditingController();bool entry=true;
   final ok=await showModalBottomSheet<bool>(context:context,isScrollControlled:true,backgroundColor:Colors.transparent,builder:(c)=>StatefulBuilder(builder:(c,setSheet)=>Padding(padding:EdgeInsets.only(bottom:MediaQuery.viewInsetsOf(c).bottom),child:Container(padding:const EdgeInsets.all(22),decoration:const BoxDecoration(color:Colors.white,borderRadius:BorderRadius.vertical(top:Radius.circular(28))),child:Wrap(runSpacing:13,children:[
    Text('Mouvement · ${product['name']}',style:const TextStyle(fontSize:18,fontWeight:FontWeight.w900)),
-   SegmentedButton<bool>(segments:const [ButtonSegment(value:true,label:Text('Entrée'),icon:Icon(Icons.add_rounded)),ButtonSegment(value:false,label:Text('Sortie'),icon:Icon(Icons.remove_rounded))],selected:{entry},onSelectionChanged:(s)=>setSheet(()=>entry=s.first)),
+   SegmentedButton<bool>(segments:const [ButtonSegment(value:true,label:Text('Entrée'),icon:Icon(Icons.add_rounded)),ButtonSegment(value:false,label:Text('Sortie'),icon:Icon(Icons.remove_rounded))],selected:{entry},onSelectionChanged:(s){setSheet((){entry=s.first;});}),
    TextField(controller:qty,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'Quantité')),
    TextField(controller:note,decoration:const InputDecoration(labelText:'Motif du mouvement')),
    SizedBox(width:double.infinity,child:FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Enregistrer le mouvement'))),
