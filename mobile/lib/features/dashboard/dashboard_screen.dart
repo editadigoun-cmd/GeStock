@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../theme/gestock_theme.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -83,7 +84,7 @@ class _TopBar extends StatelessWidget {
             gradient: const LinearGradient(colors: [GeStockColors.deepEmerald, GeStockColors.emerald]),
             borderRadius: BorderRadius.circular(14),
           ),
-          child: const Icon(Icons.all_inbox_rounded, color: Colors.white, size: 23),
+          child: Padding(padding: const EdgeInsets.all(5), child: SvgPicture.asset('assets/brand/gestock_mark.svg')),
         ),
         const SizedBox(width: 11),
         const Expanded(
