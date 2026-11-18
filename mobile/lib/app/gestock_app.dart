@@ -18,7 +18,7 @@ final appRouterProvider = Provider<GoRouter>((ref) => GoRouter(
     GoRoute(path: '/businesses', builder: (_, __) => const BusinessesScreen()),
     ShellRoute(builder: (_, __, child) => AppShell(child: child), routes: [
       GoRoute(path: '/home', builder: (_, __) => const DashboardScreen()),
-      GoRoute(path: '/inventory', builder: (_, __) => const InventoryScreen()),
+      GoRoute(path: '/inventory', builder: (_, __) => const ProductsScreen()),
       GoRoute(path: '/products', builder: (_, __) => const ProductsScreen()),
       GoRoute(path: '/sales', builder: (_, __) => const SalesScreen()),
     ]),
