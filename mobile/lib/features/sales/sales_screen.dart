@@ -1,0 +1,13 @@
+import 'package:flutter/material.dart';
+import '../../theme/gestock_theme.dart';
+class SalesScreen extends StatelessWidget {
+ const SalesScreen({super.key});
+ @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('Ventes & encaissements')),body:ListView(padding:const EdgeInsets.all(20),children:[
+  Container(padding:const EdgeInsets.all(22),decoration:BoxDecoration(color:GeStockColors.deepEmerald,borderRadius:BorderRadius.circular(23)),child:const Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('POINT DE VENTE',style:TextStyle(color:GeStockColors.mint,fontSize:9,letterSpacing:1.3,fontWeight:FontWeight.w900)),SizedBox(height:10),Text('Prêt à encaisser ?',style:TextStyle(color:Colors.white,fontSize:24,fontWeight:FontWeight.w900)),SizedBox(height:7),Text('Une interface rapide pensée pour le comptoir.',style:TextStyle(color:Color(0xFFD1EEE5),fontSize:11))])),
+  const SizedBox(height:18),SizedBox(height:55,child:FilledButton.icon(onPressed:()=>_notice(context),icon:const Icon(Icons.add_shopping_cart_rounded),label:const Text('Démarrer une vente'))),const SizedBox(height:24),const Text('Raccourcis',style:TextStyle(fontWeight:FontWeight.w900,fontSize:16)),const SizedBox(height:10),
+  const _Option(icon:Icons.history_rounded,title:'Historique des ventes',detail:'Tickets et reçus'),const _Option(icon:Icons.assignment_return_outlined,title:'Retours et remboursements',detail:'Traçabilité des retours'),const _Option(icon:Icons.account_balance_wallet_outlined,title:'Sessions de caisse',detail:'Ouverture, clôture et écarts'),
+  const SizedBox(height:18),const Text('Un paiement mobile money ne sera confirmé qu’après vérification du prestataire.',style:TextStyle(color:GeStockColors.muted,fontSize:11,height:1.4)),
+ ]));
+ static void _notice(BuildContext c)=>showDialog<void>(context:c,builder:(c)=>AlertDialog(title:const Text('Point de vente'),content:const Text('Le panier, les remises, les paiements, le journal de stock et les reçus seront raccordés au moteur transactionnel. Aucune vente fictive ne sera enregistrée.'),actions:[TextButton(onPressed:()=>Navigator.pop(c),child:const Text('Compris'))]));
+}
+class _Option extends StatelessWidget{const _Option({required this.icon,required this.title,required this.detail});final IconData icon;final String title,detail;@override Widget build(BuildContext c)=>Card(child:ListTile(leading:Icon(icon,color:GeStockColors.deepEmerald),title:Text(title,style:const TextStyle(fontWeight:FontWeight.w800,fontSize:13)),subtitle:Text(detail,style:const TextStyle(fontSize:10,color:GeStockColors.muted)),trailing:const Icon(Icons.chevron_right_rounded)));}
