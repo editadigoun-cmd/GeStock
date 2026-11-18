@@ -11,7 +11,7 @@
     "traces": { "enabled": true, "head_sampling_rate": 0.1 }
   },
   "vars": {
-    "AUTH_ISSUER": "https://ep-holy-boat-banyu93m.neonauth.c-8.eu-central-1.aws.neon.tech/gestock/auth",
+    "AUTH_ISSUER": "https://ep-holy-boat-banyu93m.neonauth.c-8.eu-central-1.aws.neon.tech",
     "AUTH_JWKS_URL": "https://ep-holy-boat-banyu93m.neonauth.c-8.eu-central-1.aws.neon.tech/gestock/auth/.well-known/jwks.json"
   },
   "hyperdrive": [
