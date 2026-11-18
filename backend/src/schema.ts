@@ -13,3 +13,7 @@ export const syncOperations=pgTable('sync_operations',{
  entityType:text('entity_type').notNull(),entityId:uuid('entity_id'),operationType:text('operation_type').notNull(),payload:jsonb('payload').notNull(),
  status:text('status').notNull().default('queued'),result:jsonb('result'),createdAt:timestamp('created_at',{withTimezone:true}).notNull().defaultNow(),processedAt:timestamp('processed_at',{withTimezone:true}),
 });
+
+export const organizations=pgTable('organizations',{id:uuid('id').defaultRandom().primaryKey(),name:text('name').notNull(),ownerUserId:uuid('owner_user_id').notNull(),status:text('status').notNull().default('active')});
+export const organizationMemberships=pgTable('organization_memberships',{id:uuid('id').defaultRandom().primaryKey(),organizationId:uuid('organization_id').notNull(),userId:uuid('user_id').notNull(),role:text('role').notNull().default('member'),status:text('status').notNull().default('active')});
+export const businesses=pgTable('businesses',{id:uuid('id').defaultRandom().primaryKey(),organizationId:uuid('organization_id').notNull(),name:text('name').notNull(),businessType:text('business_type').notNull().default('general'),countryCode:text('country_code').notNull().default('BJ'),currencyCode:text('currency_code').notNull().default('XOF'),timezone:text('timezone').notNull().default('Africa/Porto-Novo'),settings:jsonb('settings').notNull().default({}),status:text('status').notNull().default('active')});
