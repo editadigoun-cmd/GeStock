@@ -11,6 +11,6 @@
     "traces": { "enabled": true, "head_sampling_rate": 0.1 }
   },
   "hyperdrive": [
-    { "binding": "HYPERDRIVE", "id": "REPLACE_WITH_GESTOCK_HYPERDRIVE_ID" }
+    { "binding": "HYPERDRIVE", "id": "357ce85f0f35412586994aa53a3acdf0" }
   ]
 }
