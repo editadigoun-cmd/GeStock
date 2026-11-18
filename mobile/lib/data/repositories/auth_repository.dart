@@ -5,7 +5,13 @@ class AuthRepository {
   AuthRepository({Dio? dio, FlutterSecureStorage? storage})
       : _dio = dio ??
             Dio(BaseOptions(
-              baseUrl: 'https://ep-holy-boat-banyu93m.neonauth.c-8.eu-central-1.aws.neon.tech/gestock/auth',
+              baseUrl: const String.fromEnvironment(
+                'NEON_AUTH_URL',
+                defaultValue: 'https://ep-holy-boat-banyu93m.neonauth.c-8.eu-central-1.aws.neon.tech/gestock/auth',
+              ),
+              connectTimeout: const Duration(seconds: 20),
+              receiveTimeout: const Duration(seconds: 25),
+              sendTimeout: const Duration(seconds: 20),
               headers: {'Content-Type': 'application/json'},
             )),
         _storage = storage ?? const FlutterSecureStorage();
@@ -24,10 +30,7 @@ class AuthRepository {
       throw Exception(_message(response.data));
     }
     await _saveCookie(response);
-    final cookie = await _storage.read(key: _cookieKey);
-    if (cookie == null || cookie.isEmpty) {
-      throw Exception('La session n’a pas été retournée par le service.');
-    }
+    await _requireSession();
   }
 
   Future<void> signUp(String name, String email, String password) async {
@@ -40,6 +43,14 @@ class AuthRepository {
       throw Exception(_message(response.data));
     }
     await _saveCookie(response);
+    await _requireSession();
+  }
+
+  Future<void> _requireSession() async {
+    final cookie = await _storage.read(key: _cookieKey);
+    if (cookie == null || cookie.isEmpty) {
+      throw Exception('Le compte a été traité, mais aucune session sécurisée n’a été retournée. Réessayez de vous connecter.');
+    }
   }
 
   Future<String> getAccessToken() async {
@@ -86,7 +97,9 @@ class AuthRepository {
         .map((v) => v.split(';').first)
         .where((v) => v.contains('='))
         .join('; ');
-    if (cookie.isNotEmpty) await _storage.write(key: _cookieKey, value: cookie);
+    if (cookie.isNotEmpty) {
+      await _storage.write(key: _cookieKey, value: cookie);
+    }
   }
 
   String _message(dynamic data) {
