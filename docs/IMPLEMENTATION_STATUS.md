@@ -7,7 +7,7 @@
 - Local SQLite database for business workspaces, products and a durable outbox.
 - Local repositories for business and product creation.
 - Product catalogue, inventory and sales module surfaces.
-- Hono API scaffold with JWT verification, business creation/listing and membership-scoped product routes.
+- Hono API scaffold with JWT verification, business creation/listing, membership-scoped product routes and a transactional stock movement endpoint.
 - Drizzle schema mappings for app users, organizations, business memberships, products and sync operations.
 - GitHub Actions workflow for Flutter analysis/tests and backend type checking.
 
