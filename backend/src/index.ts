@@ -16,6 +16,7 @@ app.use('/v1/*', cors({
   allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
 }));
 app.get('/health', (c) => c.json({ ok: true, service: 'gestock-api', version: '0.2.0' }));
+app.use('/v1/*', authGuard);
 app.use('/v1/*', async (c, next) => {
   try {
     configureDatabase(c.env.HYPERDRIVE.connectionString);
@@ -25,7 +26,6 @@ app.use('/v1/*', async (c, next) => {
     return c.json({ error: 'DATABASE_UNAVAILABLE' }, 503);
   }
 });
-app.use('/v1/*', authGuard);
 app.route('/v1/businesses', businessRoutes);
 app.route('/v1/products', productRoutes);
 app.route('/v1/sync', syncRoutes);
