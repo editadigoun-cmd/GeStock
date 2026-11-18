@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../app/providers.dart';
 import '../../theme/gestock_theme.dart';
 
@@ -15,7 +16,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen>{
   Container(decoration:const BoxDecoration(gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[Color(0xFF063C35),Color(0xFF071D1A),Color(0xFF101C1A)]))),
   Positioned(top:-80,right:-60,child:_orb(230,GeStockColors.emerald.withValues(alpha:.15))),
   SafeArea(child:Center(child:SingleChildScrollView(padding:const EdgeInsets.all(24),child:ConstrainedBox(constraints:const BoxConstraints(maxWidth:430),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-   Container(width:58,height:58,decoration:BoxDecoration(gradient:const LinearGradient(colors:[GeStockColors.emerald,GeStockColors.deepEmerald]),borderRadius:BorderRadius.circular(19)),child:const Icon(Icons.all_inbox_rounded,color:Colors.white,size:30)),
+   Container(width:58,height:58,decoration:BoxDecoration(gradient:const LinearGradient(colors:[GeStockColors.emerald,GeStockColors.deepEmerald]),borderRadius:BorderRadius.circular(19)),child:Padding(padding:const EdgeInsets.all(6),child:SvgPicture.asset('assets/brand/gestock_mark.svg'))),
    const SizedBox(height:28),const Text('Votre activité,\nmaîtrisée.',style:TextStyle(color:Colors.white,fontSize:34,height:1.08,fontWeight:FontWeight.w900,letterSpacing:-1.2)),
    const SizedBox(height:10),const Text('Toute votre entreprise. Un seul espace.',style:TextStyle(color:Color(0xFFB6D1C9),fontSize:14)),
    const SizedBox(height:34),
