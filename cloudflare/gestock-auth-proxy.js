@@ -1,47 +1,43 @@
-// Cloudflare Worker: GeStock Neon Auth DNS proxy.
+// Cloudflare Worker: GeStock Neon Auth proxy.
 // Public entry point: https://gestock-auth-proxy.ccds22431.workers.dev/auth
-// Keeps the Neon Auth origin server-side so Android clients only resolve workers.dev.
+// Mobile clients do not send a browser Origin header. Supply the same trusted
+// application origin used by the admin web app so Better Auth's origin checks
+// accept requests forwarded by this server-side proxy.
 const UPSTREAM = "https://ep-holy-boat-banyu93m.neonauth.c-8.eu-central-1.aws.neon.tech/gestock/auth";
+const TRUSTED_APP_ORIGIN = "https://gestock-admin.ccds22431.workers.dev";
 
 async function handle(request) {
   const incoming = new URL(request.url);
 
   if (incoming.pathname === "/health") {
-    return new Response(JSON.stringify({ service: "gestock-auth-proxy", status: "ok" }), {
-      headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
+    return Response.json({ service: "gestock-auth-proxy", status: "ok" }, {
+      headers: { "Cache-Control": "no-store" }
     });
   }
 
   if (incoming.pathname === "/health/upstream") {
     try {
-      const response = await fetch(UPSTREAM + "/get-session", { headers: { "Accept": "application/json" } });
-      return new Response(JSON.stringify({
+      const response = await fetch(UPSTREAM + "/get-session", {
+        headers: { "Accept": "application/json", "Origin": TRUSTED_APP_ORIGIN }
+      });
+      return Response.json({
         service: "gestock-auth-proxy",
         proxy: "ok",
         neonAuthReachable: response.status < 500,
         neonAuthStatus: response.status
-      }), {
-        status: 200,
-        headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
-      });
+      }, { headers: { "Cache-Control": "no-store" } });
     } catch (error) {
-      return new Response(JSON.stringify({
+      return Response.json({
         service: "gestock-auth-proxy",
         proxy: "ok",
         neonAuthReachable: false,
         error: String(error)
-      }), {
-        status: 502,
-        headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
-      });
+      }, { status: 502, headers: { "Cache-Control": "no-store" } });
     }
   }
 
   if (incoming.pathname !== "/auth" && !incoming.pathname.startsWith("/auth/")) {
-    return new Response(JSON.stringify({ error: "Not found" }), {
-      status: 404,
-      headers: { "Content-Type": "application/json" }
-    });
+    return Response.json({ error: "Not found" }, { status: 404 });
   }
 
   const suffix = incoming.pathname.slice(5);
@@ -50,6 +46,12 @@ async function handle(request) {
   headers.delete("host");
   headers.delete("content-length");
   headers.delete("cf-connecting-ip");
+  headers.delete("accept-encoding");
+
+  // Preserve a real browser origin when present; for native mobile requests,
+  // provide the already-authorized GeStock admin origin.
+  if (!headers.has("origin")) headers.set("Origin", TRUSTED_APP_ORIGIN);
+  if (!headers.has("accept")) headers.set("Accept", "application/json");
 
   const init = { method: request.method, headers, redirect: "manual" };
   if (request.method !== "GET" && request.method !== "HEAD") init.body = request.body;
@@ -65,9 +67,9 @@ async function handle(request) {
       headers: outHeaders
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: "Auth upstream unavailable", detail: String(error) }), {
+    return Response.json({ error: "Auth upstream unavailable", detail: String(error) }, {
       status: 502,
-      headers: { "Content-Type": "application/json" }
+      headers: { "Cache-Control": "no-store" }
     });
   }
 }
