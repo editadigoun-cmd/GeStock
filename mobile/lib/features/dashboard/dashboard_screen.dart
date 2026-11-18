@@ -347,8 +347,8 @@ class _SyncStatus extends StatelessWidget {
     child: const Row(children: [
       Icon(Icons.cloud_done_rounded, color: Color(0xFF008A68), size: 17),
       SizedBox(width: 8),
-      Expanded(child: Text('Vos données sont à jour', style: TextStyle(color: Color(0xFF176B55), fontSize: 10, fontWeight: FontWeight.w800))),
-      Text('Synchronisé', style: TextStyle(color: Color(0xFF176B55), fontSize: 9, fontWeight: FontWeight.w700)),
+      Expanded(child: Text('Données enregistrées sur cet appareil', style: TextStyle(color: Color(0xFF176B55), fontSize: 10, fontWeight: FontWeight.w800))),
+      Text('Synchronisation cloud en préparation', style: TextStyle(color: Color(0xFF176B55), fontSize: 9, fontWeight: FontWeight.w700)),
     ]),
   );
 }
