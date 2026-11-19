@@ -91,12 +91,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                               child: SvgPicture.asset('assets/brand/gestock_mark.svg'),
                             ),
                             const SizedBox(width: 13),
-                            const Column(
+                            const Expanded(
+                              child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text('GeStock', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900, letterSpacing: -.5)),
-                                Text('GESTION · STOCKS · PERFORMANCE', style: TextStyle(color: Color(0xFFB6D1C9), fontSize: 9, letterSpacing: 1.1, fontWeight: FontWeight.w700)),
+                                Text('GESTION · STOCKS · PERFORMANCE', maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: Color(0xFFB6D1C9), fontSize: 9, letterSpacing: 1.1, fontWeight: FontWeight.w700)),
                               ],
+                            ),
                             ),
                           ],
                         ),
