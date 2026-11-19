@@ -1,4 +1,5 @@
-import 'package:flutter_test/flutter_test.dart';
+import 'dart:ui' show Size;
+import 'package:flutter_test/flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gestock/app/gestock_app.dart';
 
