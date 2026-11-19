@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-apk:
@@ -32,6 +32,10 @@ jobs:
         working-directory: mobile
         run: flutter pub get
 
+      - name: Run Flutter tests
+        working-directory: mobile
+        run: flutter test
+
       - name: Build release APK
         working-directory: mobile
         run: >-
@@ -39,10 +43,24 @@ jobs:
           --dart-define=GESTOCK_API_URL=https://gestock-api.ccds22431.workers.dev
           --dart-define=NEON_AUTH_URL=https://gestock-auth-proxy.ccds22431.workers.dev/auth
 
-      - name: Upload APK
+      - name: Upload APK artifact for CI download
         uses: actions/upload-artifact@v4
         with:
           name: GeStock-Android-APK
           path: mobile/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30
+
+      - name: Publish latest APK to GitHub Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          APK="mobile/build/app/outputs/flutter-apk/app-release.apk"
+          if gh release view android-latest >/dev/null 2>&1; then
+            gh release upload android-latest "$APK" --clobber
+          else
+            gh release create android-latest "$APK" \
+              --title "GeStock Android — dernière version" \
+              --notes "APK Android généré automatiquement depuis main. Build vérifié par Flutter CI." \
+              --target main
+          fi
