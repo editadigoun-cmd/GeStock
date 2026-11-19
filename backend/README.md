@@ -7,7 +7,7 @@ The production API is TypeScript + Hono on Cloudflare Workers. Domain data is st
 2. Push to main. Quality checks run Flutter analyze/tests, backend typecheck/tests, then apply versioned D1 migrations and deploy the API.
 3. The workflow verifies /health and /health/d1.
 
-The current D1 schema contains the 25 application tables from migrations 0001–0003. It was verified on 19 November 2026; the business, user, catalogue, sales, stock and sync tables were empty at that check. Existing Neon data was not modified or deleted.
+The current D1 schema contains the 24 application tables from migrations 0001–0003. It was verified on 19 November 2026; the business, user, catalogue, sales, stock and sync tables were empty at that check. Existing Neon data was not modified or deleted.
 
 ## API capabilities
 - Businesses: create/list, membership-scoped.
