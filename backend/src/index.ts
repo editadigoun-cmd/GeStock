@@ -29,7 +29,7 @@ app.get('/health/d1', async (c) => {
 app.use('/v1/*', authGuard);
 app.use('/v1/*', async (c, next) => {
   try {
-    configureDatabase(c.env.HYPERDRIVE.connectionString);
+    configureDatabase(c.env.DB!);
     await next();
   } catch (error) {
     console.error('Database initialization failed', error);
