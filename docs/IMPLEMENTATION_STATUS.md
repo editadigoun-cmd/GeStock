@@ -1,13 +1,14 @@
 # GeStock implementation status
 
 ## Latest verified state
-- Main only; current head at verification: `c47aa9896a80ee1e51a8c027ed7177d62b5f6204`.
-- GitHub Actions quality run `44625717823`: backend typecheck/tests, Flutter analysis/tests, D1 migrations, API deployment/health, and authentication integration smoke test all passed.
+- Main only; current head: `3cb6028f853bc9dde1fc9e390fc8491db99c7290`.
+- GitHub Actions quality run `44636843268`: backend typecheck/tests, Flutter analysis/tests, D1 migrations, API deployment/health, and authentication integration smoke test all passed.
 - Android run `44625717701`: Flutter tests, release APK build, APK signature verification, checksum generation, release upload, and downloaded checksum verification passed.
 - Admin Cloudflare deployment run `44617270299` succeeded. CI verified the unauthenticated admin path redirects to Cloudflare Access (HTTP 302).
 - Cloudflare Access application is allowlisted for `editadigoun@gmail.com`, session 24 hours.
-- D1 `gestock-db`: 27 application tables. Migration records 0001–0005 are present. User/business/product/sale counts were 0 at inspection; the auth tables are present.
+- D1 `gestock-db`: 26 application tables. Migration records 0001–0005 are present. User/business/product/sale counts were 0 at inspection; the auth tables are present.
 - Only the Cloudflare API and admin Workers remain active. The legacy auth proxy and obsolete secret were removed.
+- The dependency install reported 6 npm vulnerabilities (4 moderate, 2 high); details have not yet been audited.
 
 ## Cloudflare-native auth verified
 - Registration/login, `/auth/me`, password change, new-password login, rejection of old password, logout revocation and rejection of revoked session were exercised against the deployed API in CI.

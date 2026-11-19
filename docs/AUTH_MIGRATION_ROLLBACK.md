@@ -8,7 +8,7 @@
 - The old authentication proxy Worker and its unused admin Worker secret were removed. Current source/workflows do not call them.
 
 ## Data preservation
-Production D1 was inspected: 27 application tables, migration records 0001–0005, and zero users/businesses/products/sales at that inspection. No D1 domain records were modified by auth migration. The previous external identity source was not audited/exported; any data there is untouched and disconnected. Do not delete that external data until its owner approves an export/retention decision.
+Production D1 was inspected: 26 application tables, migration records 0001–0005, and zero users/businesses/products/sales at that inspection. No D1 domain records were modified by auth migration. The previous external identity source was not audited/exported; any data there is untouched and disconnected. Do not delete that external data until its owner approves an export/retention decision.
 
 ## Rollback
 1. If the new API has an incident, deploy a known-good Cloudflare API Worker version from the verified main history; do not restore the old auth proxy.

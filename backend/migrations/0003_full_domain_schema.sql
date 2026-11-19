@@ -1,5 +1,5 @@
--- Expand the initial D1 core schema to the full domain model.
--- Existing domain tables were empty at the time of inspection; this migration is schema-only.
+-- Expand the initial D1 core schema to match the 24-table Neon public-domain foundation.
+-- Existing Neon domain tables were checked and are empty; this migration is schema-only.
 ALTER TABLE app_users ADD COLUMN phone TEXT;
 ALTER TABLE app_users ADD COLUMN preferred_locale TEXT NOT NULL DEFAULT 'fr';
 ALTER TABLE app_users ADD COLUMN created_at TEXT;
