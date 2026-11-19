@@ -42,7 +42,7 @@ const operationSchema = z.object({
   entity_type: z.enum(['business', 'product', 'stock_movement', 'sale']),
   entity_id: z.string().uuid(),
   operation: z.string().min(1).max(40),
-  payload: z.record(z.unknown()),
+  payload: z.record(z.string(), z.unknown()),
   created_at: z.string().datetime({ offset: true }).optional(),
 });
 const batchSchema = z.object({ device_id: z.string().uuid(), operations: z.array(operationSchema).min(1).max(50) });
