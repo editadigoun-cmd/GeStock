@@ -8,6 +8,11 @@ on:
       - '.github/workflows/android-apk.yml'
   workflow_dispatch:
 
+# Serialize publishing and let the newest pending run replace older queued builds.
+concurrency:
+  group: gestock-android-release
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
@@ -40,6 +45,13 @@ jobs:
         working-directory: mobile
         run: flutter build apk --release --dart-define=GESTOCK_API_URL=https://gestock-api.ccds22431.workers.dev --dart-define=NEON_AUTH_URL=https://gestock-auth-proxy.ccds22431.workers.dev/auth
 
+      - name: Verify APK signature
+        run: |
+          APK="mobile/build/app/outputs/flutter-apk/app-release.apk"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs "$APK"
+
       - name: Rename APK for release download
         run: cp mobile/build/app/outputs/flutter-apk/app-release.apk mobile/build/app/outputs/flutter-apk/GeStock.apk
 
@@ -60,6 +72,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # Never allow a build with stale mobile sources to overwrite the release.
+          git fetch origin main --depth=1
+          if ! git diff --quiet "$GITHUB_SHA" origin/main -- mobile; then
+            echo "Mobile sources have changed since this build; keeping artifact but skipping release upload."
+            exit 0
+          fi
           APK="mobile/build/app/outputs/flutter-apk/GeStock.apk"
           CHECKSUM="$APK.sha256"
           if gh release view android-latest >/dev/null 2>&1; then
@@ -67,3 +85,6 @@ jobs:
           else
             gh release create android-latest "$APK" "$CHECKSUM" --title "GeStock Android — dernière version" --notes "APK release généré depuis main. Le fichier SHA-256 accompagne l'APK." --target main
           fi
+          mkdir -p /tmp/release-check
+          gh release download android-latest --pattern "GeStock.apk" --pattern "GeStock.apk.sha256" --dir /tmp/release-check
+          (cd /tmp/release-check && sha256sum -c GeStock.apk.sha256)
