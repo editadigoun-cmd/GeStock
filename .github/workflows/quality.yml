@@ -65,7 +65,9 @@ jobs:
         if: env.CLOUDFLARE_API_TOKEN != ''
         run: |
           curl --fail --silent --show-error --max-time 30 https://gestock-api.ccds22431.workers.dev/health | jq -e '.ok == true and .service == "gestock-api"'
-          curl --fail --silent --show-error --max-time 30 https://gestock-api.ccds22431.workers.dev/health/d1 | jq -e '.ok == true and .database == "gestock-db" and .table_count >= 24'
+          curl --fail --silent --show-error --max-time 30 https://gestock-api.ccds22431.workers.dev/health/d1 | jq -e '.ok == true and .database == "gestock-db" and .table_count >= 26 and .auth_schema_ready == true'
+          auth_status=$(curl --silent --show-error --max-time 30 --output /tmp/auth-smoke.json --write-out '%{http_code}' -H 'Content-Type: application/json' -X POST https://gestock-api.ccds22431.workers.dev/auth/login -d '{"email":"smoke-test@example.invalid","password":"NotARealPassword123"}')
+          test "$auth_status" = "401" || { echo "Expected invalid credentials (401), got $auth_status"; cat /tmp/auth-smoke.json; exit 1; }
       - name: Explain skipped deployment
         if: ${{ env.CLOUDFLARE_API_TOKEN == '' }}
         run: echo "Deployment skipped. Add CLOUDFLARE_API_TOKEN in GitHub Actions secrets to enable deployment."
