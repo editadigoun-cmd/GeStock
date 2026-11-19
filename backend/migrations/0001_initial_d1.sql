@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS warehouses (id TEXT PRIMARY KEY, business_id TEXT NOT
 CREATE TABLE IF NOT EXISTS stock_levels (id TEXT PRIMARY KEY, business_id TEXT NOT NULL, warehouse_id TEXT NOT NULL, product_id TEXT NOT NULL, quantity NUMERIC NOT NULL DEFAULT 0, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE(warehouse_id, product_id));
 CREATE TABLE IF NOT EXISTS stock_movements (id TEXT PRIMARY KEY, business_id TEXT NOT NULL, warehouse_id TEXT NOT NULL, product_id TEXT NOT NULL, movement_type TEXT NOT NULL, quantity_delta NUMERIC NOT NULL, unit_cost NUMERIC, source_type TEXT, source_id TEXT, note TEXT, actor_user_id TEXT, occurred_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS sync_operations (id TEXT PRIMARY KEY, business_id TEXT NOT NULL, device_id TEXT NOT NULL, operation_key TEXT NOT NULL UNIQUE, entity_type TEXT NOT NULL, entity_id TEXT, operation_type TEXT NOT NULL, payload TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'queued', result TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, processed_at TEXT);
+CREATE UNIQUE INDEX IF NOT EXISTS sync_devices_user_device ON sync_devices(user_id, device_key);
 CREATE INDEX IF NOT EXISTS idx_products_business ON products(business_id);
 CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode);
 CREATE INDEX IF NOT EXISTS idx_stock_levels_product ON stock_levels(product_id);
