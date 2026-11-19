@@ -175,6 +175,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
       final taxRate = (p['tax_rate'] as num?)?.toDouble() ?? 0;
       return SaleLineDraft(quantity: quantity, unitPrice: price, taxAmount: roundMoney(quantity * price * taxRate / 100));
     }).toList();
+    if (lines.isEmpty) return const SaleTotals(subtotal: 0, discountTotal: 0, taxTotal: 0, total: 0);
     return calculateSaleTotals(lines);
   }
   String _money(double amount, [String currency = 'XOF']) => '${amount.toStringAsFixed(0)} $currency';
