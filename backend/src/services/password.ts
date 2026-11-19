@@ -1,0 +1,9 @@
+const ITERATIONS = 310000;
+const encoder = new TextEncoder();
+function encode(bytes: Uint8Array): string { let binary=''; for (const b of bytes) binary += String.fromCharCode(b); return btoa(binary).replace(/=/g,''); }
+function decode(value: string): Uint8Array { const padded=value.replace(/-/g,'+').replace(/_/g,'/')+'='.repeat((4-value.length%4)%4); return Uint8Array.from(atob(padded),c=>c.charCodeAt(0)); }
+async function derive(password: string, salt: Uint8Array, iterations: number): Promise<Uint8Array> { const key=await crypto.subtle.importKey('raw',encoder.encode(password),'PBKDF2',false,['deriveBits']); return new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt,iterations},key,256)); }
+export async function hashPassword(password: string): Promise<string> { const salt=crypto.getRandomValues(new Uint8Array(16)); const digest=await derive(password,salt,ITERATIONS); return 'pbkdf2-sha256$'+ITERATIONS+'$'+encode(salt)+'$'+encode(digest); }
+export async function verifyPassword(password: string, stored: string): Promise<boolean> { const parts=stored.split('$'); if(parts.length!==4||parts[0]!=='pbkdf2-sha256')return false; const n=Number(parts[1]); if(!Number.isInteger(n)||n<100000||n>1000000)return false; try { const actual=await derive(password,decode(parts[2])),expected=decode(parts[3]); if(actual.length!==expected.length)return false; let diff=0; for(let i=0;i<actual.length;i++)diff|=actual[i]^expected[i]; return diff===0; }catch{return false;} }
+export function createSessionToken(): string { return encode(crypto.getRandomValues(new Uint8Array(32))).replace(/\\+/g,'-').replace(/\\//g,'_'); }
+export async function hashSessionToken(token: string): Promise<string> { return encode(new Uint8Array(await crypto.subtle.digest('SHA-256',encoder.encode(token)))); }

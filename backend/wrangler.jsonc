@@ -11,8 +11,8 @@
     "traces": { "enabled": true, "head_sampling_rate": 0.1 }
   },
   "vars": {
-    "AUTH_ISSUER": "https://ep-holy-boat-banyu93m.neonauth.c-8.eu-central-1.aws.neonauth.tech",
-    "AUTH_JWKS_URL": "https://ep-holy-boat-banyu93m.neonauth.c-8.eu-central-1.aws.neonauth.tech/gestock/auth/.well-known/jwks.json",
+    "ACCESS_ISSUER": "https://dark-bush-1837.cloudflareaccess.com",
+    "ACCESS_AUDIENCE": "4143db25e4dd2576066db38722c7c5138f9a17f699eafef5d8ab85c95162c689",
     "ADMIN_EMAIL": "editadigoun@gmail.com"
   },
   "d1_databases": [
