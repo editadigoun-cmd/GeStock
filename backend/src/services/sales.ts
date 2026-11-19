@@ -86,7 +86,7 @@ export async function createSaleTransaction(userId: string, input: SaleInput, sy
   const now = new Date().toISOString();
   const soldAt = input.sold_at ?? now;
 
-  const queries: Parameters<typeof db.batch>[0] = [
+  const queries: any[] = [
     db.insert(sales).values({
       id: input.id, businessId: input.business_id, locationId: null, customerId: input.customer_id ?? null,
       saleNumber: input.sale_number, status: 'completed', currencyCode: input.currency_code,
@@ -126,6 +126,6 @@ export async function createSaleTransaction(userId: string, input: SaleInput, sy
     }));
   }
   if (syncRecord) queries.push(db.insert(syncOperations).values({ ...syncRecord, result: { id: input.id, synced: true, duplicate: false } }));
-  await db.batch(queries);
+  await db.batch(queries as Parameters<typeof db.batch>[0]);
   return { id: input.id, duplicate: false, total: totals.total, amount_paid: amountPaid, change_due: Math.max(0, paymentAmount - totals.total), payment_status: pending ? 'pending' : 'confirmed' };
 }
