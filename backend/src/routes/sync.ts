@@ -97,8 +97,8 @@ async function applyOperation(authSubject: string, deviceId: string, op: z.infer
       const values = {
         id: productId, businessId: op.business_id, name, sku: p.sku ? String(p.sku) : null,
         barcode: p.barcode ? String(p.barcode) : null, unit: String(p.unit ?? 'unité'),
-        purchasePrice: String(Number(p.purchase_price ?? 0)), salePrice: String(Number(p.sale_price ?? 0)),
-        taxRate: String(Number(p.tax_rate ?? 0)), updatedAt: p.updated_at ? new Date(String(p.updated_at)) : new Date(),
+        purchasePrice: Number(p.purchase_price ?? 0), salePrice: Number(p.sale_price ?? 0),
+        taxRate: Number(p.tax_rate ?? 0), updatedAt: p.updated_at ? String(p.updated_at) : new Date().toISOString(),
       };
       if (![values.purchasePrice, values.salePrice, values.taxRate].every(v => Number.isFinite(Number(v)) && Number(v) >= 0)) throw new Error('INVALID_PRODUCT_PRICES');
       if (current) {
@@ -127,21 +127,21 @@ async function applyOperation(authSubject: string, deviceId: string, op: z.infer
         const [warehouse] = await tx.select({ id: warehouses.id }).from(warehouses).where(and(eq(warehouses.id, warehouseId), eq(warehouses.businessId, businessId))).limit(1);
         if (!product || !warehouse) throw new Error('PRODUCT_OR_WAREHOUSE_NOT_FOUND');
         await tx.insert(stockMovements).values({
-          id: movementId, businessId, warehouseId, productId, movementType, quantityDelta: String(delta),
+          id: movementId, businessId, warehouseId, productId, movementType, quantityDelta: delta,
           note: p.note ? String(p.note).slice(0, 500) : null,
-          occurredAt: p.occurred_at ? new Date(String(p.occurred_at)) : new Date(),
+          occurredAt: p.occurred_at ? String(p.occurred_at) : new Date().toISOString(),
           actorUserId: user.id,
         });
-        const [level] = await tx.insert(stockLevels).values({ businessId, warehouseId, productId, quantity: String(delta), updatedAt: new Date() })
+        const [level] = await tx.insert(stockLevels).values({ businessId, warehouseId, productId, quantity: delta, updatedAt: new Date().toISOString() })
           .onConflictDoUpdate({
             target: [stockLevels.warehouseId, stockLevels.productId],
-            set: { quantity: sql`${stockLevels.quantity} + ${String(delta)}::numeric`, updatedAt: new Date() },
+            set: { quantity: sql`${stockLevels.quantity} + ${delta}`, updatedAt: new Date() },
           }).returning({ quantity: stockLevels.quantity });
         if (Number(level.quantity) < 0) throw new Error('INSUFFICIENT_STOCK');
         result = { id: movementId, synced: true, quantity: level.quantity };
       }
     }
-    await tx.update(syncOperations).set({ status: 'applied', result, processedAt: new Date() }).where(eq(syncOperations.id, queued.id));
+    await tx.update(syncOperations).set({ status: 'applied', result, processedAt: new Date().toISOString() }).where(eq(syncOperations.id, queued.id));
     return { status: 'applied', result, duplicate: false };
   });
 }
