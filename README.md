@@ -2,14 +2,14 @@
 
 GeStock is an offline-first business management app for independent businesses and multi-company operators.
 
-## Current core workflows
+## Core workflows
 - Neon Auth sign-in and secure native session storage.
 - Multi-business setup and active workspace switching.
-- Product catalogue with SKU/barcode, purchase/sale price and stock threshold.
+- Product catalogue: SKU/barcode, purchase/sale price, tax, stock threshold and edit (long-press a product).
 - Opening inventory and stock adjustments with movement history.
 - Offline-first POS: local sale, payment record, local stock deduction, durable sync outbox and sales history.
 - Cloud API on Cloudflare Workers, D1 database, membership-scoped APIs and idempotent sync.
-- Web admin: real health monitoring, platform counts and business list (read-only).
+- Web admin: real health monitoring, business overview, recent sales, low-stock inventory and sync operations (read-only).
 
 ## Stack
 - Flutter / Dart, Riverpod, go_router and SQLite.
@@ -26,11 +26,11 @@ Neon domain-data migration is not verified; existing Neon data is preserved. D1 
 - docs/: architecture and implementation status.
 
 ## Run the mobile app
-```bash
+\`\`\`bash
 cd mobile
 flutter pub get
 flutter run
-```
+\`\`\`
 
 Build an APK from CI: the Android workflow publishes a release-mode APK with its SHA-256 checksum to the android-latest GitHub Release. It is not yet a signed Play Store bundle.
 

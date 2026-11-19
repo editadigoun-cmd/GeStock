@@ -7,12 +7,12 @@ The mobile application must remain useful without a network connection. Local wr
 
 ## Implemented stack
 - Mobile: Flutter/Dart, Material 3 with custom GeStock design system.
-- Local persistence: SQLite via sqflite (not Drift yet).
+- Local persistence: SQLite via sqflite (not Drift yet); schema version 4.
 - State: Riverpod; navigation: go_router.
 - API: TypeScript + Hono on Cloudflare Workers.
-- Domain database: Cloudflare D1 (SQLite), Drizzle ORM and versioned migrations 0001–0003.
+- Domain database: Cloudflare D1 (SQLite), Drizzle ORM and migrations 0001–0003.
 - Identity: Neon Managed Auth; domain authorization checks business membership.
-- Web administration: Next.js/Vinext on Cloudflare Workers. Admin API is read-only and currently Neon Auth protected.
+- Web administration: Next.js/Vinext on Cloudflare Workers. Admin routes are read-only and Neon Auth protected; Cloudflare Access is not yet enabled.
 - AI, push, object storage and monetization are deferred.
 
 Neon remains the identity provider and its existing domain data is preserved. A Neon-to-D1 migration is not verified.
@@ -40,18 +40,28 @@ Every business-owned record carries a business identifier. API handlers derive t
 - The outbox is durable across restarts.
 - The server records processed operation IDs to prevent duplicate application.
 - Business, product, stock movement and sale sync are supported.
+- Offline workflow tests exercise business setup, product create/edit, opening stock, adjustments, POS and queued operations. Remote sync on a real device is still unverified.
 - Conflicts are retained for retry/inspection; automatic resolution and a full UI are not complete.
 - Electronic payment remains pending until provider verification.
 
+## Admin read-only endpoints
+- \`/v1/admin/overview\`
+- \`/v1/admin/businesses\`
+- \`/v1/admin/sales\`
+- \`/v1/admin/inventory\` (low stock)
+- \`/v1/admin/sync\` (summary and recent operations)
+
+User/role CRUD, billing, ads, support, audit UI and global settings are not implemented. Access identity headers are only accepted when the explicit edge-protection flag is enabled; it remains off until Cloudflare Access is enabled.
+
 ## Current deployment
-- API: gestock-api Cloudflare Worker.
-- Admin: gestock-admin Cloudflare Worker.
-- D1 database: gestock-db, migrations 0001–0003.
-- Android release: GitHub Actions APK artifact and android-latest release with SHA-256.
+- API: \`gestock-api\` Cloudflare Worker.
+- Admin: \`gestock-admin\` Cloudflare Worker.
+- D1 database: \`gestock-db\`, migrations 0001–0003 (24 application tables).
+- Android: GitHub Actions release-mode APK and \`android-latest\` release with SHA-256.
 
 ## Next gates
-1. Complete CI verification of the POS/admin finalization and release APK.
-2. Enable Cloudflare Access manually and configure the admin allow policy; integrate verified Access authorization with admin API.
-3. Verify login/offline-to-online sync on real Android device.
+1. Complete APK artifact/checksum verification.
+2. Enable Cloudflare Access manually and configure the admin allow policy for editadigoun@gmail.com.
+3. Verify login/offline-to-online sync on a real Android device.
 4. Implement conflict resolution, user roles, payment provider, cash sessions, returns, purchasing, customer credit and receipts.
 5. Signed Play Store/App Store build and data migration verification.
