@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, like, or, sql } from 'drizzle-orm';
 import { db } from '../services/db.js';
 import {
   appUsers, businesses, products, sales, salePayments, stockMovements, syncOperations,
@@ -109,4 +109,26 @@ adminRoutes.get('/inventory', async (c) => {
     .leftJoin(stockLevels, and(eq(stockLevels.businessId, products.businessId), eq(stockLevels.productId, products.id), eq(stockLevels.warehouseId, warehouses.id)))
     .where(and(eq(products.isActive, 1), eq(products.trackStock, 1), lowStock));
   return c.json({ data: rows, count: count.count, capped: count.count > rows.length });
+});
+
+
+// Read-only platform user directory. Only verified platform administrators reach this route.
+adminRoutes.get('/users', async (c) => {
+  const query = (c.req.query('q') ?? '').trim().slice(0, 80);
+  const fields = {
+    id: appUsers.id,
+    email: appUsers.email,
+    display_name: appUsers.displayName,
+    created_at: appUsers.createdAt,
+    active_businesses: sql<number>`(SELECT COUNT(*) FROM business_memberships bm WHERE bm.user_id = app_users.id AND bm.status = 'active')`,
+    organizations: sql<number>`(SELECT COUNT(*) FROM organization_memberships om WHERE om.user_id = app_users.id AND om.status = 'active')`,
+    devices: sql<number>`(SELECT COUNT(*) FROM sync_devices sd WHERE sd.user_id = app_users.id)`,
+    last_seen: sql<string | null>`(SELECT MAX(sd.last_seen_at) FROM sync_devices sd WHERE sd.user_id = app_users.id)`,
+  };
+  const rows = query
+    ? await db.select(fields).from(appUsers)
+      .where(or(like(appUsers.email, `%${query}%`), like(appUsers.displayName, `%${query}%`)))
+      .orderBy(desc(appUsers.createdAt)).limit(100)
+    : await db.select(fields).from(appUsers).orderBy(desc(appUsers.createdAt)).limit(100);
+  return c.json({ data: rows, count: rows.length, capped: rows.length === 100 });
 });
