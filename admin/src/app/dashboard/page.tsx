@@ -5,6 +5,7 @@ type Health = { ok?: boolean; service?: string; version?: string; database?: str
 type Status = { api: Health | null; d1: Health | null; checkedAt: string; errors: string[] };
 type Overview = { users: number; businesses: number; active_businesses: number; products: number; sales: number; stock_movements: number; sync_pending: number; sync_conflicts: number };
 type Business = { id: string; name: string; business_type: string; country_code: string; currency_code: string; status: string; created_at?: string; members: number; products: number; sales: number; revenue: number };
+type AdminUser = { id: string; email?: string | null; display_name?: string | null; created_at?: string | null; active_businesses: number; organizations: number; devices: number; last_seen?: string | null };
 type AdminSale = { id: string; sale_number: string; business_id: string; business_name?: string; currency_code: string; total: number; amount_paid: number; status: string; sold_at?: string; payment_method?: string; payment_status?: string };
 type SyncOperation = { id: string; business_name?: string; entity_type: string; entity_id?: string; operation_type: string; status: string; created_at?: string; processed_at?: string; platform?: string; actor_email?: string };
 type SyncData = { summary: Record<string, number>; operations: SyncOperation[] };
@@ -32,6 +33,8 @@ export default function Dashboard() {
   const [status, setStatus] = useState<Status | null>(null);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [businesses, setBusinesses] = useState<Business[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [userQuery, setUserQuery] = useState("");
   const [sales, setSales] = useState<AdminSale[]>([]);
   const [syncData, setSyncData] = useState<SyncData | null>(null);
   const [inventory, setInventory] = useState<InventoryData | null>(null);
@@ -40,10 +43,11 @@ export default function Dashboard() {
 
   async function refresh() {
     setLoading(true);
-    const [healthResult, overviewResult, businessResult, salesResult, syncResult, inventoryResult] = await Promise.allSettled([
+    const [healthResult, overviewResult, businessResult, userResult, salesResult, syncResult, inventoryResult] = await Promise.allSettled([
       fetch("/api/status", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/admin/overview", { cache: "no-store" }).then(async (r) => ({ ok: r.ok, body: await r.json() })),
       fetch("/api/admin/businesses", { cache: "no-store" }).then(async (r) => ({ ok: r.ok, body: await r.json() })),
+      fetch(`/api/admin/users?q=${encodeURIComponent(userQuery)}`, { cache: "no-store" }).then(async (r) => ({ ok: r.ok, body: await r.json() })),
       fetch("/api/admin/sales", { cache: "no-store" }).then(async (r) => ({ ok: r.ok, body: await r.json() })),
       fetch("/api/admin/sync", { cache: "no-store" }).then(async (r) => ({ ok: r.ok, body: await r.json() })),
       fetch("/api/admin/inventory", { cache: "no-store" }).then(async (r) => ({ ok: r.ok, body: await r.json() })),
@@ -55,6 +59,8 @@ export default function Dashboard() {
     else { setOverview(null); nextErrors.push("Les métriques admin ne sont pas accessibles (session ou API)."); }
     if (businessResult.status === "fulfilled" && businessResult.value.ok) setBusinesses(businessResult.value.body?.data ?? []);
     else { setBusinesses([]); nextErrors.push("La liste des entreprises n’est pas accessible."); }
+    if (userResult.status === "fulfilled" && userResult.value.ok) setUsers(userResult.value.body?.data ?? []);
+    else { setUsers([]); nextErrors.push("L’annuaire utilisateurs n’est pas accessible."); }
     if (salesResult.status === "fulfilled" && salesResult.value.ok) setSales(salesResult.value.body?.data ?? []);
     else { setSales([]); nextErrors.push("L’historique des ventes admin n’est pas accessible."); }
     if (syncResult.status === "fulfilled" && syncResult.value.ok) setSyncData(syncResult.value.body?.data ?? null);
@@ -115,6 +121,10 @@ export default function Dashboard() {
         {metric("Sync en attente", overview?.sync_pending, "Opérations queued")}
         {metric("Conflits sync", overview?.sync_conflicts, "À examiner")}
         {metric("Stocks faibles", inventory?.count, "Seuil d’alerte réel")}
+      </section>
+      <section className="admin-panel"><div className="panel-title"><div><h2>Annuaire utilisateurs</h2><p>Comptes réels D1 — lecture seule, maximum 100 résultats.</p></div><span className="panel-icon">♙</span></div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:12}}><input aria-label="Rechercher un utilisateur" placeholder="Email ou nom…" value={userQuery} onChange={(e)=>setUserQuery(e.target.value)} style={{flex:"1 1 220px",minWidth:180,padding:"10px 12px",border:"1px solid var(--border, #d8dde5)",borderRadius:8,background:"var(--surface, #fff)",color:"inherit"}}/><button className="refresh" onClick={refresh} disabled={loading}>Rechercher</button><small>{number(users.length)} résultat(s)</small></div>
+        {users.length === 0 ? <p className="empty-state">{loading ? "Chargement…" : "Aucun utilisateur enregistré correspondant."}</p> : <div className="table-scroll"><table className="business-table"><thead><tr><th>Utilisateur</th><th>Créé le</th><th>Entreprises</th><th>Organisations</th><th>Appareils</th><th>Dernière activité sync</th></tr></thead><tbody>{users.map((user) => <tr key={user.id}><td><b>{user.display_name || "Nom non renseigné"}</b><small>{user.email || "Email non renseigné"} · {user.id.slice(0,8)}</small></td><td>{date(user.created_at || undefined)}</td><td>{number(user.active_businesses)}</td><td>{number(user.organizations)}</td><td>{number(user.devices)}</td><td>{date(user.last_seen || undefined)}</td></tr>)}</tbody></table></div>}
       </section>
       <section className="admin-panel"><div className="panel-title"><div><h2>Entreprises enregistrées</h2><p>Liste backend — lecture seule, sans données inventées.</p></div><span className="panel-icon">▦</span></div>
         {businesses.length === 0 ? <p className="empty-state">{loading ? "Chargement…" : "Aucune entreprise enregistrée dans D1."}</p> : <div className="table-scroll"><table className="business-table"><thead><tr><th>Entreprise</th><th>Type / pays</th><th>Membres</th><th>Produits</th><th>Ventes</th><th>Revenu</th><th>Statut</th></tr></thead><tbody>{businesses.map((business) => <tr key={business.id}><td><b>{business.name}</b><small>{business.id.slice(0, 8)}</small></td><td>{business.business_type}<small>{business.country_code} · {business.currency_code}</small></td><td>{number(business.members)}</td><td>{number(business.products)}</td><td>{number(business.sales)}</td><td>{money(business.revenue, business.currency_code)}</td><td><span className={"business-status " + (business.status === "active" ? "active" : "inactive")}>{business.status}</span></td></tr>)}</tbody></table></div>}
