@@ -20,10 +20,10 @@ stockRoutes.post('/movements',async(c)=>{
  const [warehouse]=await db.select({id:warehouses.id}).from(warehouses).where(and(eq(warehouses.id,input.warehouse_id),eq(warehouses.businessId,input.business_id))).limit(1);
  if(!product||!warehouse)return c.json({error:'PRODUCT_OR_WAREHOUSE_NOT_FOUND'},404);
  const result=await db.transaction(async(tx)=>{
-  const [movement]=await tx.insert(stockMovements).values({businessId:input.business_id,warehouseId:input.warehouse_id,productId:input.product_id,movementType:input.movement_type,quantityDelta:String(input.quantity_delta),unitCost:input.unit_cost===undefined?null:String(input.unit_cost),note:input.note??null}).returning();
-  await tx.insert(stockLevels).values({businessId:input.business_id,warehouseId:input.warehouse_id,productId:input.product_id,quantity:String(input.quantity_delta),updatedAt:new Date()}).onConflictDoUpdate({
+  const [movement]=await tx.insert(stockMovements).values({businessId:input.business_id,warehouseId:input.warehouse_id,productId:input.product_id,movementType:input.movement_type,quantityDelta:input.quantity_delta,unitCost:input.unit_cost??null,note:input.note??null}).returning();
+  await tx.insert(stockLevels).values({businessId:input.business_id,warehouseId:input.warehouse_id,productId:input.product_id,quantity:input.quantity_delta,updatedAt:new Date().toISOString()}).onConflictDoUpdate({
    target:[stockLevels.warehouseId,stockLevels.productId],
-   set:{quantity:sql.raw('stock_levels.quantity + ('+String(input.quantity_delta)+')'),updatedAt:new Date()},
+   set:{quantity:sql`stock_levels.quantity + ${input.quantity_delta}`,updatedAt:new Date()},
   });
   return movement;
  });
