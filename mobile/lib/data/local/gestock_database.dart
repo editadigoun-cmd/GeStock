@@ -14,9 +14,9 @@ class GeStockDatabase {
     _database = await factory.openDatabase(
       filePath,
       options: OpenDatabaseOptions(
-        version: 3,
+        version: 4,
         onCreate: (db, _) async {
-          await db.execute("CREATE TABLE businesses(id TEXT PRIMARY KEY,name TEXT NOT NULL,business_type TEXT NOT NULL,country_code TEXT NOT NULL,currency_code TEXT NOT NULL,timezone TEXT NOT NULL,created_at TEXT NOT NULL,sync_state TEXT NOT NULL DEFAULT 'pending')");
+          await db.execute("CREATE TABLE businesses(id TEXT PRIMARY KEY,name TEXT NOT NULL,business_type TEXT NOT NULL,country_code TEXT NOT NULL,currency_code TEXT NOT NULL,timezone TEXT NOT NULL,default_warehouse_id TEXT,created_at TEXT NOT NULL,sync_state TEXT NOT NULL DEFAULT 'pending')");
           await db.execute("CREATE TABLE products(id TEXT PRIMARY KEY,business_id TEXT NOT NULL,name TEXT NOT NULL,sku TEXT,barcode TEXT,category TEXT,unit TEXT NOT NULL DEFAULT 'unité',purchase_price REAL NOT NULL DEFAULT 0,sale_price REAL NOT NULL DEFAULT 0,quantity REAL NOT NULL DEFAULT 0,min_quantity REAL NOT NULL DEFAULT 0,tax_rate REAL NOT NULL DEFAULT 0,track_stock INTEGER NOT NULL DEFAULT 1,updated_at TEXT NOT NULL,sync_state TEXT NOT NULL DEFAULT 'pending')");
           await db.execute('CREATE INDEX products_business_idx ON products(business_id,name)');
           await db.execute("CREATE TABLE outbox(id TEXT PRIMARY KEY,business_id TEXT NOT NULL,entity_type TEXT NOT NULL,entity_id TEXT NOT NULL,operation TEXT NOT NULL,payload TEXT NOT NULL,created_at TEXT NOT NULL,attempts INTEGER NOT NULL DEFAULT 0,status TEXT NOT NULL DEFAULT 'queued')");
@@ -36,6 +36,7 @@ class GeStockDatabase {
             await db.execute('ALTER TABLE products ADD COLUMN track_stock INTEGER NOT NULL DEFAULT 1');
             await _createSalesTables(db);
           }
+          if (oldVersion < 4) await db.execute('ALTER TABLE businesses ADD COLUMN default_warehouse_id TEXT');
         },
       ),
     );

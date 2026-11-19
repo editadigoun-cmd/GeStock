@@ -65,6 +65,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                         return Card(
                           child: ListTile(
                             onTap: () => _adjustStock(business, product),
+                            onLongPress: () => _add(context, product: product),
                             leading: Container(
                               width: 44,
                               height: 44,
@@ -73,7 +74,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                             ),
                             title: Text(product['name'].toString(), style: const TextStyle(fontWeight: FontWeight.w800)),
                             subtitle: Text(
-                              'Réf. ${product['sku']?.toString() ?? '—'} · Stock ${quantity.toStringAsFixed(0)}',
+                              'Réf. ${product['sku']?.toString() ?? '—'} · Stock ${quantity.toStringAsFixed(0)} · ${product['sale_price']} ${business['currency_code']} · Maintenir pour modifier',
                               style: const TextStyle(fontSize: 11),
                             ),
                             trailing: Column(
@@ -192,20 +193,20 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     ),
   );
 
-  Future<void> _add(BuildContext context) async {
+  Future<void> _add(BuildContext context, {Map<String, Object?>? product}) async {
     final business = await ref.read(businessRepositoryProvider).active();
     if (business == null) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Créez d’abord une entreprise.')));
       return;
     }
-    final name = TextEditingController();
-    final sku = TextEditingController();
-    final barcode = TextEditingController();
-    final purchasePrice = TextEditingController();
-    final price = TextEditingController();
-    final taxRate = TextEditingController();
-    final quantity = TextEditingController();
-    final minimum = TextEditingController();
+    final name = TextEditingController(text: product?['name']?.toString() ?? '');
+    final sku = TextEditingController(text: product?['sku']?.toString() ?? '');
+    final barcode = TextEditingController(text: product?['barcode']?.toString() ?? '');
+    final purchasePrice = TextEditingController(text: product?['purchase_price']?.toString() ?? '');
+    final price = TextEditingController(text: product?['sale_price']?.toString() ?? '');
+    final taxRate = TextEditingController(text: product?['tax_rate']?.toString() ?? '0');
+    final quantity = TextEditingController(text: product?['quantity']?.toString() ?? '0');
+    final minimum = TextEditingController(text: product?['min_quantity']?.toString() ?? '0');
     final confirmed = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -218,8 +219,8 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
           child: Wrap(
             runSpacing: 12,
             children: [
-              const Text('Nouveau produit', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
-              TextField(controller: name, decoration: const InputDecoration(labelText: 'Nom du produit')),
+              Text(product == null ? 'Nouveau produit' : 'Modifier le produit', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+              TextField(controller: name, textCapitalization: TextCapitalization.words, decoration: const InputDecoration(labelText: 'Nom du produit')),
               TextField(controller: sku, decoration: const InputDecoration(labelText: 'Référence / SKU')),
               TextField(controller: barcode, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Code-barres (facultatif)')),
               Row(children: [
@@ -229,30 +230,46 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
               ]),
               Row(children: [
                 Expanded(child: TextField(controller: taxRate, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Taxe (%)'))),
-                const SizedBox(width: 10),
-                Expanded(child: TextField(controller: quantity, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Stock initial'))),
+                if (product == null) const SizedBox(width: 10),
+                if (product == null) Expanded(child: TextField(controller: quantity, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Stock initial'))),
               ]),
               TextField(controller: minimum, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Seuil d’alerte')),
-              SizedBox(width: double.infinity, child: FilledButton(onPressed: () => Navigator.pop(sheetContext, true), child: const Text('Enregistrer localement'))),
+              SizedBox(width: double.infinity, child: FilledButton(onPressed: () => Navigator.pop(sheetContext, true), child: Text(product == null ? 'Créer localement' : 'Enregistrer les modifications'))),
             ],
           ),
         ),
       ),
     );
     if (confirmed == true && name.text.trim().isNotEmpty) {
-      await ref.read(productRepositoryProvider).save(
-        businessId: business['id'] as String,
-        name: name.text,
-        sku: sku.text,
-        barcode: barcode.text,
-        purchasePrice: double.tryParse(purchasePrice.text.replaceAll(',', '.')) ?? 0,
-        salePrice: double.tryParse(price.text.replaceAll(',', '.')) ?? 0,
-        taxRate: double.tryParse(taxRate.text.replaceAll(',', '.')) ?? 0,
-        quantity: double.tryParse(quantity.text.replaceAll(',', '.')) ?? 0,
-        minQuantity: double.tryParse(minimum.text.replaceAll(',', '.')) ?? 0,
-      );
-      try { await ref.read(syncServiceProvider).syncPending(); } catch (_) {}
-      if (mounted) setState(() {});
+      try {
+        final repository = ref.read(productRepositoryProvider);
+        if (product == null) {
+          await repository.save(
+            businessId: business['id'] as String, name: name.text, sku: sku.text, barcode: barcode.text,
+            purchasePrice: double.tryParse(purchasePrice.text.replaceAll(',', '.')) ?? 0,
+            salePrice: double.tryParse(price.text.replaceAll(',', '.')) ?? 0,
+            taxRate: double.tryParse(taxRate.text.replaceAll(',', '.')) ?? 0,
+            quantity: double.tryParse(quantity.text.replaceAll(',', '.')) ?? 0,
+            minQuantity: double.tryParse(minimum.text.replaceAll(',', '.')) ?? 0,
+          );
+        } else {
+          await repository.update(
+            businessId: business['id'] as String, productId: product['id'] as String,
+            name: name.text, sku: sku.text, barcode: barcode.text,
+            purchasePrice: double.tryParse(purchasePrice.text.replaceAll(',', '.')) ?? 0,
+            salePrice: double.tryParse(price.text.replaceAll(',', '.')) ?? 0,
+            taxRate: double.tryParse(taxRate.text.replaceAll(',', '.')) ?? 0,
+            minQuantity: double.tryParse(minimum.text.replaceAll(',', '.')) ?? 0,
+          );
+        }
+        try { await ref.read(syncServiceProvider).syncPending(); } catch (_) {}
+        if (mounted) {
+          await _refresh();
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(product == null ? 'Produit enregistré localement.' : 'Modifications enregistrées localement.')));
+        }
+      } catch (error) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString().replaceFirst('Bad state: ', ''))));
+      }
     }
     name.dispose();
     sku.dispose();
@@ -263,4 +280,5 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     quantity.dispose();
     minimum.dispose();
   }
+
 }
