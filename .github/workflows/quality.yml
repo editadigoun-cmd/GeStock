@@ -72,7 +72,7 @@ jobs:
         if: env.CLOUDFLARE_API_TOKEN != ''
         run: |
           curl --fail --silent --show-error --max-time 30 https://gestock-api.ccds22431.workers.dev/health | jq -e '.ok == true and .service == "gestock-api"'
-          curl --fail --silent --show-error --max-time 30 https://gestock-api.ccds22431.workers.dev/health/d1 | jq -e '.ok == true and .database == "gestock-db" and .table_count == 11'
+          curl --fail --silent --show-error --max-time 30 https://gestock-api.ccds22431.workers.dev/health/d1 | jq -e '.ok == true and .database == "gestock-db" and .table_count == 24'
       - name: Explain skipped deployment
         if: ${{ env.CLOUDFLARE_API_TOKEN == '' }}
         run: echo "Deployment skipped. Add CLOUDFLARE_API_TOKEN in GitHub Actions secrets to enable deployment."
