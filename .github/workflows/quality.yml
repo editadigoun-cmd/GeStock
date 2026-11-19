@@ -77,27 +77,32 @@ jobs:
           password="Test-pass-${GITHUB_RUN_ID}-A"
           new_password="Test-pass-${GITHUB_RUN_ID}-B"
           ip=$(curl --silent --show-error --max-time 10 https://api.ipify.org)
-          register_hash=$(printf 'register:%s' "$ip" | openssl dgst -sha256 -binary | base64 | tr -d '=\\n')
-          login_hash=$(printf 'login:%s:%s' "$email" "$ip" | openssl dgst -sha256 -binary | base64 | tr -d '=\\n')
+          register_hash=$(printf 'register:%s' "$ip" | openssl dgst -sha256 -binary | base64 | tr -d '=\n')
+          login_hash=$(printf 'login:%s:%s' "$email" "$ip" | openssl dgst -sha256 -binary | base64 | tr -d '=\n')
           cleanup() {
             npx wrangler d1 execute gestock-db --remote --command "DELETE FROM auth_sessions WHERE user_id IN (SELECT id FROM app_users WHERE email='$email');" || true
             npx wrangler d1 execute gestock-db --remote --command "DELETE FROM app_users WHERE email='$email';" || true
             npx wrangler d1 execute gestock-db --remote --command "DELETE FROM auth_rate_limits WHERE key_hash IN ('$register_hash','$login_hash');" || true
           }
           trap cleanup EXIT
-          register=$(curl --silent --show-error --max-time 30 --write-out '\\n%{http_code}' -H 'Content-Type: application/json' -X POST https://gestock-api.ccds22431.workers.dev/auth/register -d "{\\\"name\\\":\\\"CI Test\\\",\\\"email\\\":\\\"$email\\\",\\\"password\\\":\\\"$password\\\"}")
+          payload=$(jq -nc --arg name "CI Test" --arg email "$email" --arg password "$password" '{name:$name,email:$email,password:$password}')
+          register=$(curl --silent --show-error --max-time 30 --write-out '\n%{http_code}' -H 'Content-Type: application/json' -X POST https://gestock-api.ccds22431.workers.dev/auth/register -d "$payload")
           code=$(printf '%s' "$register" | tail -n1)
           body=$(printf '%s' "$register" | sed '$d')
           test "$code" = "201" || { echo "Register expected 201, got $code"; echo "$body"; exit 1; }
           token=$(printf '%s' "$body" | jq -er '.data.token')
-          login=$(curl --fail --silent --show-error --max-time 30 -H 'Content-Type: application/json' -X POST https://gestock-api.ccds22431.workers.dev/auth/login -d "{\\\"email\\\":\\\"$email\\\",\\\"password\\\":\\\"$password\\\"}")
+          payload=$(jq -nc --arg email "$email" --arg password "$password" '{email:$email,password:$password}')
+          login=$(curl --fail --silent --show-error --max-time 30 -H 'Content-Type: application/json' -X POST https://gestock-api.ccds22431.workers.dev/auth/login -d "$payload")
           login_token=$(printf '%s' "$login" | jq -er '.data.token')
           me=$(curl --fail --silent --show-error --max-time 30 -H "Authorization: Bearer $login_token" https://gestock-api.ccds22431.workers.dev/auth/me)
           echo "$me" | jq -e --arg email "$email" '.data.user.email == $email'
-          curl --fail --silent --show-error --max-time 30 -H 'Content-Type: application/json' -H "Authorization: Bearer $login_token" -X POST https://gestock-api.ccds22431.workers.dev/auth/change-password -d "{\\\"currentPassword\\\":\\\"$password\\\",\\\"newPassword\\\":\\\"$new_password\\\"}" | jq -e '.ok == true'
-          new_login=$(curl --fail --silent --show-error --max-time 30 -H 'Content-Type: application/json' -X POST https://gestock-api.ccds22431.workers.dev/auth/login -d "{\\\"email\\\":\\\"$email\\\",\\\"password\\\":\\\"$new_password\\\"}")
+          payload=$(jq -nc --arg current "$password" --arg next "$new_password" '{currentPassword:$current,newPassword:$next}')
+          curl --fail --silent --show-error --max-time 30 -H 'Content-Type: application/json' -H "Authorization: Bearer $login_token" -X POST https://gestock-api.ccds22431.workers.dev/auth/change-password -d "$payload" | jq -e '.ok == true'
+          payload=$(jq -nc --arg email "$email" --arg password "$new_password" '{email:$email,password:$password}')
+          new_login=$(curl --fail --silent --show-error --max-time 30 -H 'Content-Type: application/json' -X POST https://gestock-api.ccds22431.workers.dev/auth/login -d "$payload")
           new_token=$(printf '%s' "$new_login" | jq -er '.data.token')
-          old_status=$(curl --silent --show-error --max-time 30 -o /tmp/auth-old.json -w '%{http_code}' -H 'Content-Type: application/json' -X POST https://gestock-api.ccds22431.workers.dev/auth/login -d "{\\\"email\\\":\\\"$email\\\",\\\"password\\\":\\\"$password\\\"}")
+          payload=$(jq -nc --arg email "$email" --arg password "$password" '{email:$email,password:$password}')
+          old_status=$(curl --silent --show-error --max-time 30 -o /tmp/auth-old.json -w '%{http_code}' -H 'Content-Type: application/json' -X POST https://gestock-api.ccds22431.workers.dev/auth/login -d "$payload")
           test "$old_status" = "401"
           curl --fail --silent --show-error --max-time 30 -H "Authorization: Bearer $new_token" -X POST https://gestock-api.ccds22431.workers.dev/auth/logout | jq -e '.ok == true'
           expired=$(curl --silent --show-error --max-time 30 -o /tmp/auth-expired.json -w '%{http_code}' -H "Authorization: Bearer $new_token" https://gestock-api.ccds22431.workers.dev/auth/me)
