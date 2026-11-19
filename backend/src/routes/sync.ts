@@ -13,7 +13,8 @@ const deviceSchema = z.object({
 });
 
 async function getOrCreateUser(authSubject: string) {
-  await db.insert(appUsers).values({ authSubject }).onConflictDoNothing();
+  const now = new Date().toISOString();
+  await db.insert(appUsers).values({ authSubject, createdAt: now, updatedAt: now }).onConflictDoNothing();
   const [user] = await db.select({ id: appUsers.id }).from(appUsers)
     .where(eq(appUsers.authSubject, authSubject)).limit(1);
   if (!user) throw new Error('USER_CREATE_FAILED');
@@ -45,7 +46,7 @@ const operationSchema = z.object({
 });
 const batchSchema = z.object({ device_id: z.string().uuid(), operations: z.array(operationSchema).min(1).max(50) });
 
-function operationRecord(authUserId: string, deviceId: string, op: z.infer<typeof operationSchema>, result: Record<string, unknown>) {
+function operationRecord(deviceId: string, op: z.infer<typeof operationSchema>, result: Record<string, unknown>) {
   return {
     id: crypto.randomUUID(),
     businessId: op.business_id,
@@ -80,7 +81,7 @@ async function applyOperation(authSubject: string, deviceId: string, op: z.infer
       const [membership] = await db.select({ id: businessMemberships.id }).from(businessMemberships)
         .where(and(eq(businessMemberships.businessId, op.business_id), eq(businessMemberships.userId, user.id), eq(businessMemberships.status, 'active'))).limit(1);
       if (!membership) throw new Error('FORBIDDEN');
-      await db.insert(syncOperations).values(operationRecord(user.id, deviceId, op, result));
+      await db.insert(syncOperations).values(operationRecord(deviceId, op, result));
     } else {
       const name = String(p.name ?? '').trim();
       const businessType = String(p.business_type ?? 'general');
@@ -94,11 +95,11 @@ async function applyOperation(authSubject: string, deviceId: string, op: z.infer
       }
       const orgId = crypto.randomUUID();
       await db.batch([
-        db.insert(organizations).values({ id: orgId, name, ownerUserId: user.id }),
-        db.insert(organizationMemberships).values({ id: crypto.randomUUID(), organizationId: orgId, userId: user.id, role: 'owner', status: 'active' }),
-        db.insert(businesses).values({ id: op.business_id, organizationId: orgId, name, businessType, countryCode, currencyCode, timezone }),
-        db.insert(businessMemberships).values({ id: crypto.randomUUID(), businessId: op.business_id, userId: user.id, role: 'owner', permissions: { all: true }, status: 'active' }),
-        db.insert(warehouses).values({ id: warehouseId, businessId: op.business_id, name: 'Dépôt principal', isDefault: 1 }),
+        db.insert(organizations).values({ id: orgId, name, ownerUserId: user.id, createdAt: now, updatedAt: now }),
+        db.insert(organizationMemberships).values({ id: crypto.randomUUID(), organizationId: orgId, userId: user.id, role: 'owner', status: 'active', createdAt: now }),
+        db.insert(businesses).values({ id: op.business_id, organizationId: orgId, name, businessType, countryCode, currencyCode, timezone, createdAt: now, updatedAt: now }),
+        db.insert(businessMemberships).values({ id: crypto.randomUUID(), businessId: op.business_id, userId: user.id, role: 'owner', permissions: { all: true }, status: 'active', createdAt: now }),
+        db.insert(warehouses).values({ id: warehouseId, businessId: op.business_id, name: 'Dépôt principal', isDefault: 1, createdAt: now }),
         db.insert(syncOperations).values(operationRecord(user.id, deviceId, op, result)),
       ]);
     }
