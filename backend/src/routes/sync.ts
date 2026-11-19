@@ -202,3 +202,4 @@ syncRoutes.post('/batch', async (c) => {
   }
   return c.json({ data: results });
 }
+});

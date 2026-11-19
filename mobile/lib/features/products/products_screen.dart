@@ -201,7 +201,10 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     }
     final name = TextEditingController();
     final sku = TextEditingController();
+    final barcode = TextEditingController();
+    final purchasePrice = TextEditingController();
     final price = TextEditingController();
+    final taxRate = TextEditingController();
     final quantity = TextEditingController();
     final minimum = TextEditingController();
     final confirmed = await showModalBottomSheet<bool>(
@@ -219,13 +222,17 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
               const Text('Nouveau produit', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
               TextField(controller: name, decoration: const InputDecoration(labelText: 'Nom du produit')),
               TextField(controller: sku, decoration: const InputDecoration(labelText: 'Référence / SKU')),
-              Row(
-                children: [
-                  Expanded(child: TextField(controller: price, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Prix de vente'))),
-                  const SizedBox(width: 10),
-                  Expanded(child: TextField(controller: quantity, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Stock initial'))),
-                ],
-              ),
+              TextField(controller: barcode, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Code-barres (facultatif)')),
+              Row(children: [
+                Expanded(child: TextField(controller: purchasePrice, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Prix d’achat'))),
+                const SizedBox(width: 10),
+                Expanded(child: TextField(controller: price, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Prix de vente'))),
+              ]),
+              Row(children: [
+                Expanded(child: TextField(controller: taxRate, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Taxe (%)'))),
+                const SizedBox(width: 10),
+                Expanded(child: TextField(controller: quantity, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Stock initial'))),
+              ]),
               TextField(controller: minimum, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Seuil d’alerte')),
               SizedBox(width: double.infinity, child: FilledButton(onPressed: () => Navigator.pop(sheetContext, true), child: const Text('Enregistrer localement'))),
             ],
@@ -238,7 +245,10 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
         businessId: business['id'] as String,
         name: name.text,
         sku: sku.text,
+        barcode: barcode.text,
+        purchasePrice: double.tryParse(purchasePrice.text.replaceAll(',', '.')) ?? 0,
         salePrice: double.tryParse(price.text.replaceAll(',', '.')) ?? 0,
+        taxRate: double.tryParse(taxRate.text.replaceAll(',', '.')) ?? 0,
         quantity: double.tryParse(quantity.text.replaceAll(',', '.')) ?? 0,
         minQuantity: double.tryParse(minimum.text.replaceAll(',', '.')) ?? 0,
       );
@@ -247,7 +257,10 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     }
     name.dispose();
     sku.dispose();
+    barcode.dispose();
+    purchasePrice.dispose();
     price.dispose();
+    taxRate.dispose();
     quantity.dispose();
     minimum.dispose();
   }

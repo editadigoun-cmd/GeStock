@@ -28,6 +28,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
         final business = businessSnapshot.data;
         if (business == null) return _emptyBusiness();
         final businessId = business['id'] as String;
+        final currency = business['currency_code']?.toString() ?? 'XOF';
         return FutureBuilder<List<Map<String, Object?>>>(
           future: ref.read(productRepositoryProvider).list(businessId),
           builder: (context, productSnapshot) {
@@ -111,7 +112,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
         const SizedBox(height: 8),
         if (rows.isEmpty) const Card(child: Padding(padding: EdgeInsets.all(14), child: Text('Aucune vente enregistrée.', style: TextStyle(color: GeStockColors.muted)))),
         ...rows.take(20).map((sale) => Card(child: ListTile(
-          leading: Icon(sale['sync_state'] == 'synced' ? Icons.cloud_done_rounded : Icons.cloud_upload_outlined, color: sale['sync_state'] == 'synced' ? GeStockColors.deepEmerald : GeStockColors.orange),
+          leading: Icon(sale['sync_state'] == 'synced' ? Icons.cloud_done_rounded : Icons.cloud_upload_outlined, color: sale['sync_state'] == 'synced' ? GeStockColors.deepEmerald : GeStockColors.amber),
           title: Text(sale['sale_number'].toString(), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
           subtitle: Text('${DateTime.tryParse(sale['sold_at'].toString())?.toLocal().toString().substring(0,16) ?? ''} · ${sale['payment_method']} · ${sale['sync_state']}', style: const TextStyle(fontSize: 10)),
           trailing: Text(_money((sale['total'] as num).toDouble(), sale['currency_code']?.toString() ?? 'XOF'), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11)),

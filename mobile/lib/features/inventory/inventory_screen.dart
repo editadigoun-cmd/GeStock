@@ -51,7 +51,7 @@ class InventoryScreen extends ConsumerWidget {
                     final delta = (movement['quantity_delta'] as num?)?.toDouble() ?? 0;
                     final synced = movement['sync_state'] == 'synced';
                     return Card(child: ListTile(
-                      leading: Icon(delta >= 0 ? Icons.add_circle_outline : Icons.remove_circle_outline, color: delta >= 0 ? GeStockColors.deepEmerald : GeStockColors.orange),
+                      leading: Icon(delta >= 0 ? Icons.add_circle_outline : Icons.remove_circle_outline, color: delta >= 0 ? GeStockColors.deepEmerald : GeStockColors.amber),
                       title: Text(movement['product_name']?.toString() ?? 'Produit', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
                       subtitle: Text('${movement['movement_type']} · ${movement['note'] ?? ''} · ${synced ? 'Synchronisé' : 'Local / en attente'}', style: const TextStyle(fontSize: 10)),
                       trailing: Text('${delta >= 0 ? '+' : ''}${delta.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.w900)),
@@ -67,6 +67,7 @@ class InventoryScreen extends ConsumerWidget {
       },
     ),
   );
+  }
 
 class _Stat extends StatelessWidget {
   const _Stat({required this.label, required this.value, required this.icon});
