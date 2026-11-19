@@ -2,8 +2,7 @@ import type { MiddlewareHandler } from 'hono';
 import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from 'jose';
 
 export type AppBindings = {
-  HYPERDRIVE: { connectionString: string };
-  DB?: D1Database;
+  DB: D1Database;
   AUTH_ISSUER: string;
   AUTH_AUDIENCE?: string;
   AUTH_JWKS_URL: string;
