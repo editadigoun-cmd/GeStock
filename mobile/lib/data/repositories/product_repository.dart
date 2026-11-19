@@ -54,9 +54,14 @@ class ProductRepository {
     }
     final d = await db.database;
     final normalizedSku = sku.trim();
+    final normalizedBarcode = barcode.trim();
     if (normalizedSku.isNotEmpty) {
       final duplicate = await d.query('products', where: 'business_id = ? AND sku = ?', whereArgs: [businessId, normalizedSku], limit: 1);
       if (duplicate.isNotEmpty) throw StateError('Cette référence existe déjà.');
+    }
+    if (normalizedBarcode.isNotEmpty) {
+      final duplicate = await d.query('products', where: 'business_id = ? AND barcode = ?', whereArgs: [businessId, normalizedBarcode], limit: 1);
+      if (duplicate.isNotEmpty) throw StateError('Ce code-barres existe déjà.');
     }
     final id = _uuid.v4();
     final warehouseRows = await d.query('warehouses', where: 'business_id = ? AND is_default = 1', whereArgs: [businessId], limit: 1);
@@ -66,7 +71,7 @@ class ProductRepository {
     final payload = {
       'id': id, 'business_id': businessId, 'name': name.trim(),
       'sku': normalizedSku.isEmpty ? null : normalizedSku,
-      'barcode': barcode.trim().isEmpty ? null : barcode.trim(),
+      'barcode': normalizedBarcode.isEmpty ? null : normalizedBarcode,
       'purchase_price': purchasePrice, 'sale_price': salePrice, 'tax_rate': taxRate,
       'quantity': quantity, 'min_quantity': minQuantity, 'unit': 'unité', 'updated_at': now,
     };
@@ -112,15 +117,20 @@ class ProductRepository {
     final existing = await d.query('products', where: 'id = ? AND business_id = ?', whereArgs: [productId, businessId], limit: 1);
     if (existing.isEmpty) throw StateError('Produit introuvable.');
     final normalizedSku = sku.trim();
+    final normalizedBarcode = barcode.trim();
     if (normalizedSku.isNotEmpty) {
       final duplicate = await d.query('products', where: 'business_id = ? AND sku = ? AND id <> ?', whereArgs: [businessId, normalizedSku, productId], limit: 1);
       if (duplicate.isNotEmpty) throw StateError('Cette référence existe déjà.');
+    }
+    if (normalizedBarcode.isNotEmpty) {
+      final duplicate = await d.query('products', where: 'business_id = ? AND barcode = ? AND id <> ?', whereArgs: [businessId, normalizedBarcode, productId], limit: 1);
+      if (duplicate.isNotEmpty) throw StateError('Ce code-barres existe déjà.');
     }
     final now = DateTime.now().toUtc().toIso8601String();
     final payload = {
       'id': productId, 'business_id': businessId, 'name': name.trim(),
       'sku': normalizedSku.isEmpty ? null : normalizedSku,
-      'barcode': barcode.trim().isEmpty ? null : barcode.trim(),
+      'barcode': normalizedBarcode.isEmpty ? null : normalizedBarcode,
       'purchase_price': purchasePrice, 'sale_price': salePrice, 'tax_rate': taxRate,
       'min_quantity': minQuantity, 'unit': existing.first['unit'] ?? 'unité', 'updated_at': now,
     };
