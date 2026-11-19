@@ -1,6 +1,12 @@
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { summarizeSyncStatuses } from '../src/services/admin-summary.js';
+import { summarizeSyncStatuses, normalizeAdminSearch } from '../src/services/admin-summary.js';
+
+test('admin search trims whitespace and caps query length', () => {
+  assert.equal(normalizeAdminSearch('  sku  '), 'sku');
+  assert.equal(normalizeAdminSearch(undefined), '');
+  assert.equal(normalizeAdminSearch('x'.repeat(120)).length, 80);
+});
 
 test('admin sync summary counts known and unknown statuses without dropping records', () => {
   const summary = summarizeSyncStatuses([

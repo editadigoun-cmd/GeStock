@@ -112,9 +112,81 @@ adminRoutes.get('/inventory', async (c) => {
 });
 
 
+// Platform search normalization keeps queries bounded and whitespace-free.
+export function normalizeAdminSearch(raw?: string): string {
+  return (raw ?? '').trim().slice(0, 80);
+}
+
+adminRoutes.get('/products', async (c) => {
+  const query = normalizeAdminSearch(c.req.query('q'));
+  const businessId = c.req.query('business_id')?.trim();
+  const where = and(
+    businessId ? eq(products.businessId, businessId) : undefined,
+    query ? or(
+      like(products.name, `%${query}%`),
+      like(products.sku, `%${query}%`),
+      like(products.barcode, `%${query}%`),
+      like(businesses.name, `%${query}%`),
+    ) : undefined,
+  );
+  const rows = await db.select({
+    id: products.id, business_id: products.businessId, business_name: businesses.name,
+    name: products.name, sku: products.sku, barcode: products.barcode, unit: products.unit,
+    purchase_price: products.purchasePrice, sale_price: products.salePrice, tax_rate: products.taxRate,
+    is_active: products.isActive, track_stock: products.trackStock,
+    min_quantity: sql<number>`COALESCE(json_extract(${products.metadata}, '$.min_quantity'), 0)`.mapWith(Number),
+    quantity: sql<number>`COALESCE(${stockLevels.quantity}, 0)`.mapWith(Number),
+    warehouse_name: warehouses.name, currency_code: businesses.currencyCode, updated_at: products.updatedAt,
+  }).from(products)
+    .leftJoin(businesses, eq(businesses.id, products.businessId))
+    .leftJoin(warehouses, and(eq(warehouses.businessId, products.businessId), eq(warehouses.isDefault, 1)))
+    .leftJoin(stockLevels, and(eq(stockLevels.businessId, products.businessId), eq(stockLevels.productId, products.id), eq(stockLevels.warehouseId, warehouses.id)))
+    .where(where).orderBy(desc(products.updatedAt)).limit(100);
+  const [count] = await db.select({ count: sql<number>`count(*)`.mapWith(Number) })
+    .from(products).leftJoin(businesses, eq(businesses.id, products.businessId)).where(where);
+  return c.json({ data: rows, count: count.count, capped: count.count > rows.length });
+});
+
+adminRoutes.get('/movements', async (c) => {
+  const query = normalizeAdminSearch(c.req.query('q'));
+  const businessId = c.req.query('business_id')?.trim();
+  const movementType = c.req.query('movement_type')?.trim();
+  const allowed = ['opening', 'purchase', 'sale', 'return_in', 'return_out', 'adjustment', 'transfer_in', 'transfer_out'];
+  if (movementType && !allowed.includes(movementType)) return c.json({ error: 'INVALID_MOVEMENT_TYPE' }, 400);
+  const where = and(
+    businessId ? eq(stockMovements.businessId, businessId) : undefined,
+    movementType ? eq(stockMovements.movementType, movementType) : undefined,
+    query ? or(
+      like(products.name, `%${query}%`),
+      like(products.sku, `%${query}%`),
+      like(businesses.name, `%${query}%`),
+      like(stockMovements.note, `%${query}%`),
+      like(stockMovements.sourceId, `%${query}%`),
+      like(appUsers.email, `%${query}%`),
+    ) : undefined,
+  );
+  const rows = await db.select({
+    id: stockMovements.id, business_id: stockMovements.businessId, business_name: businesses.name,
+    product_name: products.name, sku: products.sku, warehouse_name: warehouses.name,
+    movement_type: stockMovements.movementType, quantity_delta: stockMovements.quantityDelta,
+    unit_cost: stockMovements.unitCost, source_type: stockMovements.sourceType, source_id: stockMovements.sourceId,
+    note: stockMovements.note, actor_email: appUsers.email, occurred_at: stockMovements.occurredAt,
+  }).from(stockMovements)
+    .leftJoin(products, eq(products.id, stockMovements.productId))
+    .leftJoin(businesses, eq(businesses.id, stockMovements.businessId))
+    .leftJoin(warehouses, eq(warehouses.id, stockMovements.warehouseId))
+    .leftJoin(appUsers, eq(appUsers.id, stockMovements.actorUserId))
+    .where(where).orderBy(desc(stockMovements.occurredAt)).limit(100);
+  const [count] = await db.select({ count: sql<number>`count(*)`.mapWith(Number) })
+    .from(stockMovements).leftJoin(products, eq(products.id, stockMovements.productId))
+    .leftJoin(businesses, eq(businesses.id, stockMovements.businessId))
+    .leftJoin(appUsers, eq(appUsers.id, stockMovements.actorUserId)).where(where);
+  return c.json({ data: rows, count: count.count, capped: count.count > rows.length });
+});
+
 // Read-only platform user directory. Only verified platform administrators reach this route.
 adminRoutes.get('/users', async (c) => {
-  const query = (c.req.query('q') ?? '').trim().slice(0, 80);
+  const query = normalizeAdminSearch(c.req.query('q'));
   const fields = {
     id: appUsers.id,
     email: appUsers.email,

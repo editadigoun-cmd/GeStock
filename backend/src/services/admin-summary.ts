@@ -1,3 +1,7 @@
+export function normalizeAdminSearch(raw?: string): string {
+  return (raw ?? '').trim().slice(0, 80);
+}
+
 export type SyncStatusCount = { status: string; count: number };
 
 export function summarizeSyncStatuses(rows: SyncStatusCount[]) {
