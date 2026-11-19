@@ -1,33 +1,25 @@
 # GeStock implementation status
 
-## Verified 19 November 2026
+## Verified 19 November 2026 (20:10 CET)
 
-- Source verification: commit `587f14e168317f33c66d156dd62d2de38564f430`. GitHub Actions quality workflow passed: backend TypeScript typecheck/tests, Flutter analyze/tests, D1 migration check, API deployment, API health and D1 health.
-- API Worker `gestock-api` deployed to `https://gestock-api.ccds22431.workers.dev`; `/health` and `/health/d1` passed in CI. Cloudflare deployment metadata shows the latest API deployment at 13:11 UTC on 19 November.
-- Admin Worker `gestock-admin` deployed from commit `11ddccb46cadc52d806ab57313a4212b1a65b873`; build and login-page smoke test passed. Cloudflare deployment metadata shows the latest admin deployment at 13:03 UTC on 19 November.
-- Android release APK built successfully from commit `587f14e168317f33c66d156dd62d2de38564f430` (Actions run 44529736367). Artifact ZIP SHA-256: `6e088e5eea572de82f3c19776adeedaf2a4e47b9a7fdc011d006624a8a5be627`.
-- APK size: 54,584,743 bytes. The APK's SHA-256 was independently recomputed from the downloaded workflow artifact and matched the accompanying checksum: `97ba0405fe28253f9dbf264d32d5942bd2ea0974b2dd0c78b765f9a81d9591f6`. The APK v2 signing block and signature were cryptographically verified. The signer certificate is the Android Debug certificate; this is suitable for test/sideload use, not a production Play Store upload key. A production signing keystore and signed AAB remain unconfigured.
-- Cloudflare D1 migrations `0001`–`0003` are applied. Read-only queries confirm 24 application tables, and users, organizations, businesses, products, sales, stock movements, sync operations and other operational tables contain zero rows. Neon and existing data were not modified.
+- Repository default branch is `main`. Latest source commit checked: `2873cb91bd9b89b6e2815ce42b630dd4ede28d08` (test-only fix to await the duplicate-barcode assertion). Its Vercel production deployment is **READY**: [deployment](https://vercel.com/ccds22431-9924/gestock-admin/5FWuGrXSMjorWsQ5xsJgAxdBCeJb).
+- Latest fully inspected GitHub Actions quality run, `44571921649`, passed Flutter analyze/tests, backend typecheck/tests, D1 migrations, API deployment and health checks. It ran for `c06add3190e4f35561bcd57ecc3998eaba50df09`, immediately before the test-only HEAD commit. The available GitHub connector cannot enumerate push-triggered runs/check-runs for `2873cb9`; therefore CI for the exact HEAD is not confirmed here.
+- Android release build run `44571921560` succeeded for `c06add3`. GitHub artifact `14553808781` (`GeStock-Android-APK`) was downloaded and verified: ZIP SHA-256 `5c9c1081fb4d0f4493c8332671dd77b230e3fd1c283a1b90422116446f706817`. The ZIP contains a 54,584,743-byte APK and its checksum file. APK SHA-256 recomputed from the mounted file and checked against the sidecar: `187c5e47ffe7266d3b17cf6fcd33e51972a396d4279129b88b524da82053cd76`. APK is Debug-signed; no production signing key or Play Store AAB is configured.
+- API Worker `gestock-api` is active in Cloudflare: latest deployment `7e34d1d7-62d7-4e0c-aacf-e36d1631959f`, 100% traffic, deployed 18:00:46 UTC. API health/D1 checks passed in run `44571921649`.
+- Admin Worker `gestock-admin` is active: latest deployment `27084fd2-9684-4e49-a385-e1eafdbfd7d0`, 100% traffic, deployed 16:57:37 UTC. Canonical console: https://gestock-admin.ccds22431.workers.dev.
+- Cloudflare Access is enabled in account `ed1783922fcd87086ef7757e242fc0f2`. App `GeStock Admin Console` protects the canonical admin Worker; 24-hour session and Allow policy `Allow GeStock Administrator` include only `editadigoun@gmail.com`. CI run [44561527098](https://github.com/editadigoun-cmd/GeStock/actions/runs/44561527098) verified the unauthenticated edge redirect before enabling the Worker trust flag. Neon Auth remains the second authentication layer; native mobile still uses Neon Auth. Vercel is not behind this Access app, so use the Cloudflare Worker URL as canonical.
+- D1 database `gestock-db` was queried read-only. 26 SQLite tables are present including Cloudflare internal `_cf_KV` and migration ledger `d1_migrations`; the API health count excludes those and reports 24 application tables. Migrations `0001`–`0003` are recorded. All queried business data tables are empty (0 users, organizations, businesses, products, sales, stock, sync operations, etc.). No Neon or D1 business data was changed.
 
 ## Connected workflows
 
-- Mobile business setup and active-business switching.
-- Offline catalogue creation and editing (long-press a product), SKU/barcode, purchase/sale price, tax and minimum-stock threshold.
-- Initial stock and stock adjustments, with a durable offline outbox and movement history.
-- Offline POS sale, line/payment records, local stock deduction and sale sync queue.
-- Backend sale creation, sale history/detail, stock movements, atomic stock updates and idempotent sync.
-- Admin web console is real-data read-only: overview, businesses, recent sales/payments, low-stock products, sync operations/statuses, and a searchable user directory (active business/organization memberships, devices, and last sync activity). Empty D1 results are displayed as empty, not demo data. The directory endpoint is `GET /v1/admin/users`; user/role mutation, invitations, and detailed permissions remain missing.
-- SQLite schema is version 4. The migration adds `default_warehouse_id` to existing local business databases. Offline workflow tests cover business setup, catalogue, opening stock, adjustments, POS and outbox, plus pending product-edit coalescing.
+- Mobile: business setup and workspace switching; country/currency/timezone; offline product create/edit with SKU/barcode/prices/tax/threshold; opening stock and adjustments with movement history; POS sale with payment record and local stock deduction; durable outbox and sales history.
+- Backend: business, product, stock and sales endpoints; idempotent sync, membership-scoped access, stock updates, sales and history. D1 triggers guard against negative stock.
+- Admin read-only: overview, businesses, recent sales/payments, low-stock inventory, sync operations and searchable users with memberships/devices/activity. Endpoint `GET /v1/admin/users`. Empty states are real database results, not mock/demo data. User/role writes, invites and permission management remain unimplemented.
+- Local SQLite schema version 4. Tests cover business/catalogue/initial stock/adjustments/POS/outbox and pending product-edit coalescing. Flutter analyze/tests passed in run `44571921649` for commit `c06add3`.
 
-## Security verification
+## Remaining work / release gates
 
-- Cloudflare Access organization **GeStock Admin** is enabled in account `ed1783922fcd87086ef7757e242fc0f2` (created through the supported API). Login domain: `dark-bush-1837.cloudflareaccess.com`.
-- Access application `GeStock Admin Console` protects `gestock-admin.ccds22431.workers.dev` (app ID `3b0bbfec-3667-45c7-8691-a117d47fc269`) with a 24-hour session. Policy `Allow GeStock Administrator` (ID `bb1633ad-7f68-43da-876b-4a5e92ede12a`) allows only `editadigoun@gmail.com`.
-- The Cloudflare deployment workflow verified the unauthenticated edge redirect to Cloudflare Access in run [44561527098](https://github.com/editadigoun-cmd/GeStock/actions/runs/44561527098) before setting the Worker secret `CLOUDFLARE_ACCESS_ENABLED=true`. The admin Worker therefore trusts Access identity headers only after edge enforcement passed. Neon Auth remains required for the admin session/API token as a second layer. Native mobile remains on Neon Auth.
-- Vercel deployments are not covered by this Access application; the alternate Vercel admin still relies on Neon Auth and administrator checks. Use the Cloudflare Worker URL as the canonical Access-protected console.
-
-## Remaining blockers
-- Admin user/role CRUD, billing/subscriptions, ads, support, audit UI and global settings need backend capabilities.
-- Mobile provider-confirmed payments, cash sessions, refunds/returns, purchasing, customers/credit, receipt printing, multi-warehouse transfers and conflict-resolution UI remain incomplete.
-- Production Android signing, a signed Play Store AAB, iOS, store release and real-device testing are not verified.
-- Neon-to-D1 migration and real-device end-to-end online sync are not verified. Preserve Neon and existing data.
+- Admin: user/role CRUD, invitations, billing/subscriptions, ads, support, audit UI and global settings require backend capabilities.
+- Mobile: provider-confirmed electronic payments, cash sessions, refunds/returns, purchasing/receiving, customer credit, receipts/printing, warehouse transfers and a full conflict-resolution UI remain incomplete.
+- Production Android signing, signed AAB/Play Store, iOS and real-device testing are not verified.
+- Neon-to-D1 migration and end-to-end real-device sync are not verified. Preserve Neon and all existing data until a tested migration and rollback plan exist.
