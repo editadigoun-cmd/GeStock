@@ -53,6 +53,11 @@ class ProductRepository {
       throw ArgumentError('Veuillez vérifier les informations du produit.');
     }
     final d = await db.database;
+    final normalizedSku = sku.trim();
+    if (normalizedSku.isNotEmpty) {
+      final duplicate = await d.query('products', where: 'business_id = ? AND sku = ?', whereArgs: [businessId, normalizedSku], limit: 1);
+      if (duplicate.isNotEmpty) throw StateError('Cette référence existe déjà.');
+    }
     final id = _uuid.v4();
     final warehouseRows = await d.query('warehouses', where: 'business_id = ? AND is_default = 1', whereArgs: [businessId], limit: 1);
     if (warehouseRows.isEmpty) throw StateError('Aucun dépôt principal pour cette entreprise.');
@@ -60,7 +65,7 @@ class ProductRepository {
     final now = DateTime.now().toUtc().toIso8601String();
     final payload = {
       'id': id, 'business_id': businessId, 'name': name.trim(),
-      'sku': sku.trim().isEmpty ? null : sku.trim(),
+      'sku': normalizedSku.isEmpty ? null : normalizedSku,
       'barcode': barcode.trim().isEmpty ? null : barcode.trim(),
       'purchase_price': purchasePrice, 'sale_price': salePrice, 'tax_rate': taxRate,
       'quantity': quantity, 'min_quantity': minQuantity, 'unit': 'unité', 'updated_at': now,
@@ -84,6 +89,57 @@ class ProductRepository {
         await txn.insert('outbox', {
           'id': _uuid.v4(), 'business_id': businessId, 'entity_type': 'stock_movement',
           'entity_id': movementId, 'operation': 'create', 'payload': jsonEncode(movement), 'created_at': now,
+        });
+      }
+    });
+  }
+
+  Future<void> update({
+    required String businessId,
+    required String productId,
+    required String name,
+    required String sku,
+    required String barcode,
+    required double purchasePrice,
+    required double salePrice,
+    required double taxRate,
+    required double minQuantity,
+  }) async {
+    if (name.trim().isEmpty || [purchasePrice, salePrice, taxRate, minQuantity].any((v) => !v.isFinite || v < 0)) {
+      throw ArgumentError('Veuillez vérifier les informations du produit.');
+    }
+    final d = await db.database;
+    final existing = await d.query('products', where: 'id = ? AND business_id = ?', whereArgs: [productId, businessId], limit: 1);
+    if (existing.isEmpty) throw StateError('Produit introuvable.');
+    final normalizedSku = sku.trim();
+    if (normalizedSku.isNotEmpty) {
+      final duplicate = await d.query('products', where: 'business_id = ? AND sku = ? AND id <> ?', whereArgs: [businessId, normalizedSku, productId], limit: 1);
+      if (duplicate.isNotEmpty) throw StateError('Cette référence existe déjà.');
+    }
+    final now = DateTime.now().toUtc().toIso8601String();
+    final payload = {
+      'id': productId, 'business_id': businessId, 'name': name.trim(),
+      'sku': normalizedSku.isEmpty ? null : normalizedSku,
+      'barcode': barcode.trim().isEmpty ? null : barcode.trim(),
+      'purchase_price': purchasePrice, 'sale_price': salePrice, 'tax_rate': taxRate,
+      'min_quantity': minQuantity, 'unit': existing.first['unit'] ?? 'unité', 'updated_at': now,
+    };
+    await d.transaction((txn) async {
+      await txn.update('products', {
+        'name': payload['name'], 'sku': payload['sku'], 'barcode': payload['barcode'],
+        'purchase_price': purchasePrice, 'sale_price': salePrice, 'tax_rate': taxRate,
+        'min_quantity': minQuantity, 'updated_at': now, 'sync_state': 'pending',
+      }, where: 'id = ? AND business_id = ?', whereArgs: [productId, businessId]);
+      final pending = await txn.query('outbox',
+        where: "entity_type = 'product' AND entity_id = ? AND status IN ('queued','failed','conflict')",
+        whereArgs: [productId], orderBy: 'created_at DESC', limit: 1);
+      if (pending.isNotEmpty) {
+        await txn.update('outbox', {'payload': jsonEncode(payload), 'created_at': now, 'status': 'queued', 'attempts': 0},
+          where: 'id = ?', whereArgs: [pending.first['id']]);
+      } else {
+        await txn.insert('outbox', {
+          'id': _uuid.v4(), 'business_id': businessId, 'entity_type': 'product', 'entity_id': productId,
+          'operation': 'upsert', 'payload': jsonEncode(payload), 'created_at': now,
         });
       }
     });

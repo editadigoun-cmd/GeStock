@@ -6,6 +6,10 @@ const API_BASE = process.env.GESTOCK_API_URL || "https://gestock-api.ccds22431.w
 const APP_ORIGIN = "https://gestock-admin.ccds22431.workers.dev";
 
 export async function proxyAdminApi(request: NextRequest, endpoint: string) {
+  if (process.env.CLOUDFLARE_ACCESS_ENABLED === "true") {
+    const accessEmail = (request.headers.get("cf-access-authenticated-user-email") || "").toLowerCase();
+    if (accessEmail !== ADMIN_EMAIL) return NextResponse.json({ error: "ACCESS_ADMIN_REQUIRED" }, { status: 403, headers: { "Cache-Control": "no-store" } });
+  }
   const cookie = request.headers.get("cookie") || "";
   if (!cookie) return NextResponse.json({ error: "SESSION_REQUIRED" }, { status: 401, headers: { "Cache-Control": "no-store" } });
   try {

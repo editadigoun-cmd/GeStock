@@ -62,7 +62,6 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                         final product = rows[index];
                         final quantity = (product['quantity'] as num?)?.toDouble() ?? 0;
                         final minimum = (product['min_quantity'] as num?)?.toDouble() ?? 0;
-                        final low = quantity <= minimum;
                         return Card(
                           child: ListTile(
                             onTap: () => _adjustStock(business, product),
