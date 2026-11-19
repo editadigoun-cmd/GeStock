@@ -1,68 +1,31 @@
 # GeStock — Technical architecture
 
 ## Product constraints
-GeStock supports multiple businesses per user. Each workspace is isolated by business, with its own currency, country, timezone, locations, warehouses, catalogue, staff and permissions.
+GeStock supports multiple businesses per user, isolated by business membership. Mobile remains offline-first using SQLite and a durable outbox. Sync is idempotent. Provider-confirmed electronic payments are not implemented.
 
-Mobile must work offline. Local writes commit to SQLite first and a durable outbox; sync is asynchronous and idempotent. Electronic payments remain pending until provider confirmation.
+## Cloudflare-only infrastructure
+- Flutter/Dart mobile; local SQLite.
+- API: TypeScript/Hono on Cloudflare Workers.
+- Business and authentication records: Cloudflare D1, Drizzle and migrations.
+- Web administration: Cloudflare Workers/Vinext.
+- Admin protection: Cloudflare Access, allowlisted administrator.
+- Mobile/API authentication: D1 user records, salted PBKDF2-SHA-256 password hashes, random opaque session tokens, SHA-256 token hashes, 30-day expiry and revocation.
+- Admin API: signed Cloudflare Access JWT forwarded server-side and validated against issuer, audience and administrator email.
+- Source and automation: GitHub main branch only.
 
-## Mandatory Cloudflare architecture
-- Mobile: Flutter/Dart.
-- Local persistence: SQLite/sqflite.
-- API: TypeScript + Hono on Cloudflare Workers.
-- Domain data: Cloudflare D1, Drizzle, migrations 0001–0003.
-- Web admin: deployed on Cloudflare Workers.
-- Admin security: Cloudflare Access, allow only the configured administrator.
-- Identity target: Cloudflare-native authentication with D1-backed user records and secure token/session handling.
-- Git: GitHub main branch only; production deployment is Cloudflare-only.
-
-Any external hosting, identity, or domain-data provider is outside the approved architecture. The current identity implementation is legacy and must be replaced by the Cloudflare-native solution before removing it; preserve existing account records and implement a tested migration/rollback. Do not leave authentication or API authorization unavailable during transition.
+Auth migration is additive (migrations 0004/0005). Rollback means redeploying a prior Worker version without reverting/dropping D1 tables. Keep the former proxy only until live tests and mobile release adoption pass, then decommission it; it is not called by current source.
 
 ## Domain model
-1. Identity/profile, organizations, businesses and memberships.
-2. Locations, warehouses, product categories, catalogue and barcodes.
-3. Stock levels and immutable movements.
-4. Sales, lines, payments, returns and receipts.
-5. Purchasing, suppliers and receiving.
-6. Customers, balances and credit.
-7. Cash registers, sessions and expenses.
-8. Reporting, notifications and audit.
-9. Devices, sync operations and conflicts.
-10. Entitlements and monetization.
+Users, organizations, businesses/memberships, locations/warehouses, product catalogue, stock movements/levels, sales/lines/payments, purchasing/suppliers, customers, cash registers/sessions, expenses, audit, devices and sync operations.
 
-## Data isolation and integrity
-Every business-owned row includes its business scope. API handlers derive the actor from verified identity, validate membership and scope queries. Stock is recorded as movements and stock-level updates are atomic; D1 guards against negative stock.
+## Integrity and isolation
+Server derives user identity from verified sessions; admin identity is verified Access JWT. Memberships scope business data. Stock movement writes are atomic and negative-stock triggers remain.
 
 ## Offline synchronization
-- SQLite is the local source of truth.
-- Mutations use operation/device IDs and a durable outbox.
-- Server-side processed operation IDs prevent duplicate application.
-- Business, product, stock movement and sale sync paths are implemented.
-- Local tests cover business setup, catalogue create/edit, initial stock, adjustments, POS and queued operations.
-- Remote synchronization on a physical device is not yet verified. Conflicts are retained; full conflict-resolution UI and automatic resolution remain incomplete.
-- Provider-confirmed electronic payment is not implemented; payments must remain pending until a provider verifies them.
+Local writes commit to SQLite and outbox before network. Server operation IDs prevent duplicate application. Business, product, stock movement and sale synchronization exists. Physical-device remote sync and full conflict UI remain unverified/incomplete.
 
-## Admin read-only API
-- `GET /v1/admin/overview`
-- `GET /v1/admin/businesses`
-- `GET /v1/admin/sales`
-- `GET /v1/admin/inventory` (low stock)
-- `GET /v1/admin/sync`
-- `GET /v1/admin/users` (directory with membership/device/activity data)
+## Admin read-only endpoints
+GET /v1/admin/overview, businesses, sales, inventory, sync and users. User/role writes, invitations, billing, ads, support, audit UI and full settings remain incomplete.
 
-The admin console displays actual backend data and empty states, not demo values. User/role mutation, invitations, billing, ads, support, audit UI and global settings are not implemented.
-
-## Security
-Cloudflare Access protects the canonical admin Worker and restricts access to the configured administrator. Access identity headers are only trusted after verifying edge enforcement. API access must validate signed tokens issued by the approved Cloudflare-native authentication system and enforce business membership.
-
-## Current infrastructure
-- API Worker: `gestock-api`.
-- Admin Worker: `gestock-admin`.
-- D1: `gestock-db`; migrations 0001–0003.
-- Android: GitHub Actions release APK and checksum; test signing currently used.
-
-## Release gates
-1. Replace the legacy external authentication and proxy with Cloudflare-native identity, sessions, token issuance/verification, account recovery and secure password storage. Test migration and rollback before deleting old resources.
-2. Run a physical-device smoke test for business setup, product, stock adjustment, POS and online/offline sync.
-3. Complete conflict-resolution UX and provider-verified payment; cash, purchasing, returns, credit, receipts and warehouse transfer.
-4. Production Android signing key, signed AAB, iOS build and store release.
-5. Admin write operations/roles, audit, support and settings.
+## Auth limitations
+No email verification or email-delivered password recovery. A user who forgets their mobile password must contact support; admin account recovery is managed by Cloudflare Access/identity provider. The new auth flow must pass CI and live registration/login/session/logout/admin JWT tests before legacy auth resources are removed.
