@@ -45,3 +45,7 @@ jobs:
         run: printf '%s' "$NEON_AUTH_BASE_URL" | npx --yes wrangler secret put NEON_AUTH_BASE_URL --name gestock-admin
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      - name: Verify admin web deployment
+        run: |
+          page=$(curl --fail --silent --show-error --location --max-time 30 https://gestock-admin.ccds22431.workers.dev/login)
+          echo "$page" | grep -q "GeStock"
