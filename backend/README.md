@@ -1,20 +1,29 @@
 # GeStock API — Cloudflare Workers
 
-Production API and authentication run on Cloudflare Workers. Business data and identity/session records are stored in Cloudflare D1 (gestock-db). No Vercel or Neon service is required by this repository.
+The production API is TypeScript + Hono on Cloudflare Workers. Domain data is stored in Cloudflare D1 (gestock-db); user identity and login remain on Neon Managed Auth. D1 is not a verified migration of the existing Neon database.
 
-## Cloudflare-native authentication
-- Registration and login: POST /auth/register and POST /auth/login.
-- Sessions use random 256-bit opaque tokens; only SHA-256 digests are stored in D1. Tokens expire after 30 days and logout revokes them.
-- Passwords are salted PBKDF2-SHA-256 (310,000 iterations).
-- GET /auth/me validates a session. POST /auth/change-password requires the current password and revokes other sessions.
-- Email verification and email-based password recovery are not implemented yet. Mobile users cannot self-recover passwords; the admin console is separately protected by Cloudflare Access.
-- Business API routes require D1-backed session tokens. Admin routes require a Cloudflare Access JWT with the configured issuer/audience and exact allowlisted email.
+## Deploy and verify
+1. Set the GitHub Actions secret CLOUDFLARE_API_TOKEN with permissions to deploy Workers and apply D1 migrations.
+2. Push to main. Quality checks run Flutter analyze/tests, backend typecheck/tests, then apply versioned D1 migrations and deploy the API.
+3. The workflow verifies /health and /health/d1.
 
-## D1 migrations and rollback
-Migration 0004 is additive: password fields and session tables only. It does not delete business records. Rollback redeploys the previous Worker version while retaining the additive D1 migration; never drop tables or reset D1. On 19 November 2026, D1 was checked live: migrations 0001–0003 were applied and business/user/product/sale counts were zero. Migration 0004 must be confirmed by CI after deploy. Existing external identity accounts were not imported; users must register again. Keep legacy infrastructure during a controlled rollback window, then decommission only after confirming no released client depends on it.
+The current D1 schema contains the 24 application tables from migrations 0001–0003. It was verified on 19 November 2026; the business, user, catalogue, sales, stock and sync tables were empty at that check. Existing Neon data was not modified or deleted.
 
-## Deployment
-GitHub Actions secret CLOUDFLARE_API_TOKEN must authorize Workers and D1. Push main: tests run, migration applies, API deploys, and health checks verify /health and /health/d1. Admin deploy uses Cloudflare Workers/Vinext and verifies that unauthenticated requests are redirected by Cloudflare Access before trusting Access identity headers.
+## API capabilities
+- Businesses: create/list, membership-scoped.
+- Products: create/list and offline upsert synchronization.
+- Stock: atomic movements, current levels and movement history; negative stock blocked by D1 triggers.
+- Sales: atomic sale, sale lines, payment record and stock deduction; sync is idempotent.
+- Sync: device registration and batches for business, product, stock movement and sale.
+- Platform admin: read-only overview, business list, sales, inventory/low-stock, sync operations, and user directory (`GET /v1/admin/users`) restricted to the verified administrator email. The user directory supports email/name search and reports active memberships, devices, and last sync; user/role CRUD and invitations are not implemented.
 
-## Features
-Businesses, products, stock, sales, and offline idempotent sync; read-only admin overview, business/sales/inventory/sync/user directory. External payment providers, email verification/recovery, advanced role/invitation management, subscriptions, advertising, support and complete settings/audit tools remain unfinished.
+Mobile Money/card/bank payment records remain pending until an external provider is integrated and verifies payment. No payment provider is currently connected.
+
+## Admin web access
+
+The Cloudflare Workers admin host is protected by Cloudflare Access with an allow policy for `editadigoun@gmail.com`. The deployment workflow first verifies the edge login redirect, then sets `CLOUDFLARE_ACCESS_ENABLED=true` for the Worker. Admin API calls additionally require a verified Neon Auth JWT for the configured administrator. Native mobile uses Neon Auth independently. The Vercel deployment URL is not covered by this Access application and remains protected by Neon Auth.
+
+## Authentication
+The API validates Neon Managed Auth JWTs using the configured issuer and JWKS. The admin API also requires a verified email claim matching ADMIN_EMAIL. Native mobile continues to use Neon Auth and secure device storage.
+
+Never put Neon credentials or Cloudflare tokens in Git. The D1 binding is named DB.

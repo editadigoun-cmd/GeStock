@@ -93,9 +93,8 @@ export default function Dashboard() {
         const access = await fetch("/api/access/identity", { cache: "no-store" }).then((r) => r.ok ? r.json() : null);
         const accessEmail = (access?.email || "").toLowerCase();
         if (accessEmail && accessEmail !== ADMIN_EMAIL) { location.replace("/login"); return; }
-        const session = await fetch("/api/auth/get-session", { credentials: "include", cache: "no-store" }).then((r) => r.ok ? r.json() : null);
-        if ((session?.user?.email || "").toLowerCase() !== ADMIN_EMAIL) { location.replace("/login"); return; }
-        if (live) { setEmail(ADMIN_EMAIL); setAuthMode(accessEmail === ADMIN_EMAIL ? "Cloudflare Access + Neon Auth" : "Neon Auth"); }
+        if (accessEmail !== ADMIN_EMAIL) { location.replace("/login"); return; }
+        if (live) { setEmail(ADMIN_EMAIL); setAuthMode("Cloudflare Access"); }
         if (live) await refresh();
       } catch { location.replace("/login"); }
     })();
@@ -103,8 +102,7 @@ export default function Dashboard() {
   }, []);
 
   async function logout() {
-    await fetch("/api/auth/sign-out", { method: "POST", credentials: "include" });
-    location.href = authMode.includes("Cloudflare Access") ? "/cdn-cgi/access/logout" : "/login";
+    location.href = "/cdn-cgi/access/logout";
   }
   const serviceRow = (symbol: string, name: string, detail: string, available?: boolean) => (
     <div className="service-row" key={name}>
