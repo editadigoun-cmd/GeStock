@@ -19,6 +19,10 @@ The current D1 schema contains the 24 application tables from migrations 0001–
 
 Mobile Money/card/bank payment records remain pending until an external provider is integrated and verifies payment. No payment provider is currently connected.
 
+## Admin web access
+
+The Cloudflare Workers admin host is protected by Cloudflare Access with an allow policy for `editadigoun@gmail.com`. The deployment workflow first verifies the edge login redirect, then sets `CLOUDFLARE_ACCESS_ENABLED=true` for the Worker. Admin API calls additionally require a verified Neon Auth JWT for the configured administrator. Native mobile uses Neon Auth independently. The Vercel deployment URL is not covered by this Access application and remains protected by Neon Auth.
+
 ## Authentication
 The API validates Neon Managed Auth JWTs using the configured issuer and JWKS. The admin API also requires a verified email claim matching ADMIN_EMAIL. Native mobile continues to use Neon Auth and secure device storage.
 
