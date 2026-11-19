@@ -21,6 +21,21 @@ void main() {
     await databaseFactoryFfi.deleteDatabase(testPath);
   });
 
+  test('country defaults resolve currency and timezone consistently', () async {
+    expect(defaultCurrencyForCountry('BJ'), 'XOF');
+    expect(defaultCurrencyForCountry('CM'), 'XAF');
+    expect(defaultCurrencyForCountry('US'), 'USD');
+    expect(defaultCurrencyForCountry('NG'), 'NGN');
+    expect(defaultCurrencyForCountry('GH'), 'GHS');
+    expect(defaultCurrencyForCountry('GB'), 'GBP');
+    expect(defaultTimezoneForCountry('US'), 'America/New_York');
+    expect(defaultTimezoneForCountry('NG'), 'Africa/Lagos');
+    await BusinessRepository(db).create(name: 'US test', type: 'commerce', country: 'US', currency: defaultCurrencyForCountry('US'));
+    final business = (await BusinessRepository(db).active())!;
+    expect(business['currency_code'], 'USD');
+    expect(business['timezone'], 'America/New_York');
+  });
+
   test('business, catalogue, stock adjustments and POS persist offline to the outbox', () async {
     final businesses = BusinessRepository(db);
     final products = ProductRepository(db);
@@ -81,6 +96,18 @@ void main() {
     final payment = (await database.query('sale_payments', where: 'sale_id = ?', whereArgs: [saleId])).single;
     expect(payment['status'], 'pending');
     expect(payment['paid_at'], isNull);
+  });
+
+  test('duplicate barcodes are rejected on create and update', () async {
+    final businesses = BusinessRepository(db);
+    final products = ProductRepository(db);
+    await businesses.create(name: 'Barcode test', type: 'commerce', country: 'BJ', currency: 'XOF');
+    final businessId = (await businesses.active())!['id'] as String;
+    await products.save(businessId: businessId, name: 'First', sku: 'A', barcode: '123456', purchasePrice: 10, salePrice: 20, taxRate: 0, quantity: 1, minQuantity: 0);
+    await products.save(businessId: businessId, name: 'Second', sku: 'B', barcode: '654321', purchasePrice: 10, salePrice: 20, taxRate: 0, quantity: 1, minQuantity: 0);
+    final second = (await products.list(businessId)).firstWhere((row) => row['sku'] == 'B');
+    expect(() => products.save(businessId: businessId, name: 'Third', sku: 'C', barcode: '123456', purchasePrice: 10, salePrice: 20, taxRate: 0, quantity: 0, minQuantity: 0), throwsStateError);
+    await expectLater(products.update(businessId: businessId, productId: second['id'] as String, name: 'Second', sku: 'B', barcode: '123456', purchasePrice: 10, salePrice: 20, taxRate: 0, minQuantity: 0), throwsStateError);
   });
 
   test('editing a product coalesces its pending create and preserves stock', () async {
