@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 import '../local/gestock_database.dart';
 
