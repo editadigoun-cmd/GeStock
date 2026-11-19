@@ -32,6 +32,9 @@ jobs:
           npm audit --json > npm-audit.json || true
           node -e "const a=require('./npm-audit.json'); console.log('Audit severity counts:', JSON.stringify(a.metadata?.vulnerabilities)); for (const [name,v] of Object.entries(a.vulnerabilities||{})) { console.log(name, v.severity, v.range, 'fixAvailable=', JSON.stringify(v.fixAvailable)); for (const via of v.via||[]) if (typeof via==='object') console.log('  ',via.title,via.url||''); }"
         working-directory: backend
+      - name: Block high-severity backend dependency advisories
+        run: npm audit --audit-level=high
+        working-directory: backend
       - run: npm run typecheck
         working-directory: backend
       - run: npm run test
