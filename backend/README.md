@@ -15,7 +15,7 @@ The current D1 schema contains the 24 application tables from migrations 0001–
 - Stock: atomic movements, current levels and movement history; negative stock blocked by D1 triggers.
 - Sales: atomic sale, sale lines, payment record and stock deduction; sync is idempotent.
 - Sync: device registration and batches for business, product, stock movement and sale.
-- Platform admin: read-only overview and business list restricted to the verified administrator email.
+- Platform admin: read-only overview, business list, sales, inventory/low-stock, sync operations, and user directory (`GET /v1/admin/users`) restricted to the verified administrator email. The user directory supports email/name search and reports active memberships, devices, and last sync; user/role CRUD and invitations are not implemented.
 
 Mobile Money/card/bank payment records remain pending until an external provider is integrated and verifies payment. No payment provider is currently connected.
 
