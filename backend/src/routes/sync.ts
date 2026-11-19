@@ -17,8 +17,8 @@ syncRoutes.post('/devices/register', async (c) => {
   const result = await db.transaction(async (tx) => {
     let [user] = await tx.select({ id: appUsers.id }).from(appUsers).where(eq(appUsers.authSubject, c.get('userId'))).limit(1);
     if (!user) [user] = await tx.insert(appUsers).values({ authSubject: c.get('userId') }).returning({ id: appUsers.id });
-    const [device] = await tx.insert(syncDevices).values({ userId: user.id, deviceKey: parsed.data.device_key, platform: parsed.data.platform, lastSeenAt: new Date() })
-      .onConflictDoUpdate({ target: [syncDevices.userId, syncDevices.deviceKey], set: { platform: parsed.data.platform, lastSeenAt: new Date() } })
+    const [device] = await tx.insert(syncDevices).values({ userId: user.id, deviceKey: parsed.data.device_key, platform: parsed.data.platform, lastSeenAt: new Date().toISOString() })
+      .onConflictDoUpdate({ target: [syncDevices.userId, syncDevices.deviceKey], set: { platform: parsed.data.platform, lastSeenAt: new Date().toISOString() } })
       .returning({ id: syncDevices.id });
     return device;
   });
@@ -98,7 +98,7 @@ async function applyOperation(authSubject: string, deviceId: string, op: z.infer
         id: productId, businessId: op.business_id, name, sku: p.sku ? String(p.sku) : null,
         barcode: p.barcode ? String(p.barcode) : null, unit: String(p.unit ?? 'unité'),
         purchasePrice: Number(p.purchase_price ?? 0), salePrice: Number(p.sale_price ?? 0),
-        taxRate: Number(p.tax_rate ?? 0), updatedAt: p.updated_at ? String(p.updated_at) : new Date().toISOString(),
+        taxRate: Number(p.tax_rate ?? 0), updatedAt: p.updated_at ? String(p.updated_at) : new Date().toISOString().toISOString(),
       };
       if (![values.purchasePrice, values.salePrice, values.taxRate].every(v => Number.isFinite(Number(v)) && Number(v) >= 0)) throw new Error('INVALID_PRODUCT_PRICES');
       if (current) {
@@ -129,10 +129,10 @@ async function applyOperation(authSubject: string, deviceId: string, op: z.infer
         await tx.insert(stockMovements).values({
           id: movementId, businessId, warehouseId, productId, movementType, quantityDelta: delta,
           note: p.note ? String(p.note).slice(0, 500) : null,
-          occurredAt: p.occurred_at ? String(p.occurred_at) : new Date().toISOString(),
+          occurredAt: p.occurred_at ? String(p.occurred_at) : new Date().toISOString().toISOString(),
           actorUserId: user.id,
         });
-        const [level] = await tx.insert(stockLevels).values({ businessId, warehouseId, productId, quantity: delta, updatedAt: new Date().toISOString() })
+        const [level] = await tx.insert(stockLevels).values({ businessId, warehouseId, productId, quantity: delta, updatedAt: new Date().toISOString().toISOString() })
           .onConflictDoUpdate({
             target: [stockLevels.warehouseId, stockLevels.productId],
             set: { quantity: sql`${stockLevels.quantity} + ${delta}`, updatedAt: new Date() },
@@ -141,7 +141,7 @@ async function applyOperation(authSubject: string, deviceId: string, op: z.infer
         result = { id: movementId, synced: true, quantity: level.quantity };
       }
     }
-    await tx.update(syncOperations).set({ status: 'applied', result, processedAt: new Date().toISOString() }).where(eq(syncOperations.id, queued.id));
+    await tx.update(syncOperations).set({ status: 'applied', result, processedAt: new Date().toISOString().toISOString() }).where(eq(syncOperations.id, queued.id));
     return { status: 'applied', result, duplicate: false };
   });
 }
