@@ -38,7 +38,8 @@ businessRoutes.post('/', async (c) => {
 
   // D1 has no interactive SQL transactions. Ensure the user idempotently, then
   // create the organization/business/memberships/warehouse in one atomic batch.
-  await db.insert(appUsers).values({ authSubject: subject }).onConflictDoNothing();
+  const now = new Date().toISOString();
+  await db.insert(appUsers).values({ authSubject: subject, createdAt: now, updatedAt: now }).onConflictDoNothing();
   const [user] = await db.select({ id: appUsers.id }).from(appUsers)
     .where(eq(appUsers.authSubject, subject)).limit(1);
   if (!user) return c.json({ error: 'USER_CREATE_FAILED' }, 503);
@@ -50,18 +51,18 @@ businessRoutes.post('/', async (c) => {
   const warehouseId = crypto.randomUUID();
 
   await db.batch([
-    db.insert(organizations).values({ id: orgId, name: input.name, ownerUserId: user.id }),
-    db.insert(organizationMemberships).values({ id: orgMembershipId, organizationId: orgId, userId: user.id, role: 'owner', status: 'active' }),
+    db.insert(organizations).values({ id: orgId, name: input.name, ownerUserId: user.id, createdAt: now, updatedAt: now }),
+    db.insert(organizationMemberships).values({ id: orgMembershipId, organizationId: orgId, userId: user.id, role: 'owner', status: 'active', createdAt: now }),
     db.insert(businesses).values({
       id: businessId, organizationId: orgId, name: input.name,
       businessType: input.business_type, countryCode: input.country_code,
-      currencyCode: input.currency_code, timezone: input.timezone,
+      currencyCode: input.currency_code, timezone: input.timezone, createdAt: now, updatedAt: now,
     }),
     db.insert(businessMemberships).values({
       id: businessMembershipId, businessId, userId: user.id,
-      role: 'owner', permissions: { all: true }, status: 'active',
+      role: 'owner', permissions: { all: true }, status: 'active', createdAt: now,
     }),
-    db.insert(warehouses).values({ id: warehouseId, businessId, name: 'Dépôt principal', isDefault: 1 }),
+    db.insert(warehouses).values({ id: warehouseId, businessId, name: 'Dépôt principal', isDefault: 1, createdAt: now }),
   ]);
 
   const [created] = await db.select().from(businesses).where(eq(businesses.id, businessId)).limit(1);
