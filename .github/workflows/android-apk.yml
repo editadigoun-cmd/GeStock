@@ -43,11 +43,14 @@ jobs:
           --dart-define=GESTOCK_API_URL=https://gestock-api.ccds22431.workers.dev
           --dart-define=NEON_AUTH_URL=https://gestock-auth-proxy.ccds22431.workers.dev/auth
 
+      - name: Rename APK for release download
+        run: cp mobile/build/app/outputs/flutter-apk/app-release.apk mobile/build/app/outputs/flutter-apk/GeStock.apk
+
       - name: Upload APK artifact for CI download
         uses: actions/upload-artifact@v4
         with:
           name: GeStock-Android-APK
-          path: mobile/build/app/outputs/flutter-apk/app-release.apk
+          path: mobile/build/app/outputs/flutter-apk/GeStock.apk
           if-no-files-found: error
           retention-days: 30
 
@@ -55,7 +58,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          APK="mobile/build/app/outputs/flutter-apk/app-release.apk"
+          APK="mobile/build/app/outputs/flutter-apk/GeStock.apk"
           if gh release view android-latest >/dev/null 2>&1; then
             gh release upload android-latest "$APK" --clobber
           else
