@@ -21,7 +21,7 @@ stockRoutes.post('/movements',async(c)=>{
  if(!product||!warehouse)return c.json({error:'PRODUCT_OR_WAREHOUSE_NOT_FOUND'},404);
  const result=await db.transaction(async(tx)=>{
   const [movement]=await tx.insert(stockMovements).values({businessId:input.business_id,warehouseId:input.warehouse_id,productId:input.product_id,movementType:input.movement_type,quantityDelta:input.quantity_delta,unitCost:input.unit_cost??null,note:input.note??null}).returning();
-  await tx.insert(stockLevels).values({businessId:input.business_id,warehouseId:input.warehouse_id,productId:input.product_id,quantity:input.quantity_delta,updatedAt:new Date().toISOString()}).onConflictDoUpdate({
+  await tx.insert(stockLevels).values({businessId:input.business_id,warehouseId:input.warehouse_id,productId:input.product_id,quantity:input.quantity_delta,updatedAt:new Date().toISOString().toISOString()}).onConflictDoUpdate({
    target:[stockLevels.warehouseId,stockLevels.productId],
    set:{quantity:sql`stock_levels.quantity + ${input.quantity_delta}`,updatedAt:new Date()},
   });
