@@ -93,6 +93,7 @@ async function applyOperation(authSubject: string, deviceId: string, op: z.infer
           !/^[A-Z]{2}$/.test(countryCode) || !/^[A-Z]{3}$/.test(currencyCode)) {
         throw new Error('INVALID_BUSINESS_PAYLOAD');
       }
+      const now = new Date().toISOString();
       const orgId = crypto.randomUUID();
       await db.batch([
         db.insert(organizations).values({ id: orgId, name, ownerUserId: user.id, createdAt: now, updatedAt: now }),
@@ -100,7 +101,7 @@ async function applyOperation(authSubject: string, deviceId: string, op: z.infer
         db.insert(businesses).values({ id: op.business_id, organizationId: orgId, name, businessType, countryCode, currencyCode, timezone, createdAt: now, updatedAt: now }),
         db.insert(businessMemberships).values({ id: crypto.randomUUID(), businessId: op.business_id, userId: user.id, role: 'owner', permissions: { all: true }, status: 'active', createdAt: now }),
         db.insert(warehouses).values({ id: warehouseId, businessId: op.business_id, name: 'Dépôt principal', isDefault: 1, createdAt: now }),
-        db.insert(syncOperations).values(operationRecord(user.id, deviceId, op, result)),
+        db.insert(syncOperations).values(operationRecord(deviceId, op, result)),
       ]);
     }
     return { status: 'applied', result, duplicate: false };
@@ -129,7 +130,7 @@ async function applyOperation(authSubject: string, deviceId: string, op: z.infer
     const write = current
       ? db.update(products).set({ name: values.name, sku: values.sku, barcode: values.barcode, unit: values.unit, purchasePrice: values.purchasePrice, salePrice: values.salePrice, taxRate: values.taxRate, updatedAt: values.updatedAt }).where(eq(products.id, productId))
       : db.insert(products).values(values);
-    await db.batch([write, db.insert(syncOperations).values(operationRecord(user.id, deviceId, op, result))]);
+    await db.batch([write, db.insert(syncOperations).values(operationRecord(deviceId, op, result))]);
     return { status: 'applied', result, duplicate: false };
   }
 
@@ -147,7 +148,7 @@ async function applyOperation(authSubject: string, deviceId: string, op: z.infer
   const [existingMovement] = await db.select({ id: stockMovements.id }).from(stockMovements).where(eq(stockMovements.id, movementId)).limit(1);
   const result = { id: movementId, synced: true, duplicate: Boolean(existingMovement) };
   if (existingMovement) {
-    await db.insert(syncOperations).values(operationRecord(user.id, deviceId, op, result));
+    await db.insert(syncOperations).values(operationRecord(deviceId, op, result));
     return { status: 'applied', result, duplicate: false };
   }
   const [product] = await db.select({ id: products.id }).from(products)
@@ -168,7 +169,7 @@ async function applyOperation(authSubject: string, deviceId: string, op: z.infer
       target: [stockLevels.warehouseId, stockLevels.productId],
       set: { quantity: sql`${stockLevels.quantity} + ${delta}`, updatedAt: now },
     }),
-    db.insert(syncOperations).values(operationRecord(user.id, deviceId, op, result)),
+    db.insert(syncOperations).values(operationRecord(deviceId, op, result)),
   ]);
   return { status: 'applied', result, duplicate: false };
 }
