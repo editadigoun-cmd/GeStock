@@ -7,7 +7,7 @@
 - Admin Worker `gestock-admin` deployed from commit `11ddccb46cadc52d806ab57313a4212b1a65b873`; build and login-page smoke test passed. Cloudflare deployment metadata shows the latest admin deployment at 13:03 UTC on 19 November.
 - Android release APK built successfully from commit `587f14e168317f33c66d156dd62d2de38564f430` (Actions run 44529736367). Artifact ZIP SHA-256: `6e088e5eea572de82f3c19776adeedaf2a4e47b9a7fdc011d006624a8a5be627`.
 - APK size: 54,584,743 bytes. The APK's SHA-256 was independently recomputed from the downloaded workflow artifact and matched the accompanying checksum: `97ba0405fe28253f9dbf264d32d5942bd2ea0974b2dd0c78b765f9a81d9591f6`. The APK v2 signing block and signature were cryptographically verified. The signer certificate is the Android Debug certificate; this is suitable for test/sideload use, not a production Play Store upload key. A production signing keystore and signed AAB remain unconfigured.
-- Cloudflare D1 migrations `0001`–`0003` are applied. Read-only queries confirm 24 application tables, and users, organizations, businesses, products, sales, stock movements, sync operations and other operational tables contain zero rows. Neon and existing data were not modified.
+- Cloudflare D1 migrations `0001`–`0003` are applied. Read-only queries confirm 25 application tables, and users, organizations, businesses, products, sales, stock movements, sync operations and other operational tables contain zero rows. Neon and existing data were not modified.
 
 ## Connected workflows
 
