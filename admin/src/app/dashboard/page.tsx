@@ -17,6 +17,7 @@ const capabilities = [
   { name: "Ventes / POS", detail: "Ventes, lignes, paiements et déduction de stock", state: "Connecté" },
   { name: "Synchronisation mobile", detail: "Appareils, opérations idempotentes et conflits", state: "Connecté" },
   { name: "Entreprises", detail: "Liste et métriques réelles (lecture seule)", state: "Connecté" },
+  { name: "Annuaire utilisateurs", detail: "Comptes, entreprises, organisations et appareils (lecture seule)", state: "Connecté" },
   { name: "Gestion utilisateurs / rôles", detail: "CRUD, invitations et permissions détaillées", state: "Backend manquant" },
   { name: "Abonnements / facturation", detail: "Plans, paiements et droits", state: "Backend manquant" },
   { name: "Publicités / monétisation", detail: "Campagnes, placements et revenus", state: "Backend manquant" },
