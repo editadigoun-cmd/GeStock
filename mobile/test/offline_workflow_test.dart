@@ -106,7 +106,7 @@ void main() {
     await products.save(businessId: businessId, name: 'First', sku: 'A', barcode: '123456', purchasePrice: 10, salePrice: 20, taxRate: 0, quantity: 1, minQuantity: 0);
     await products.save(businessId: businessId, name: 'Second', sku: 'B', barcode: '654321', purchasePrice: 10, salePrice: 20, taxRate: 0, quantity: 1, minQuantity: 0);
     final second = (await products.list(businessId)).firstWhere((row) => row['sku'] == 'B');
-    expect(() => products.save(businessId: businessId, name: 'Third', sku: 'C', barcode: '123456', purchasePrice: 10, salePrice: 20, taxRate: 0, quantity: 0, minQuantity: 0), throwsStateError);
+    await expectLater(products.save(businessId: businessId, name: 'Third', sku: 'C', barcode: '123456', purchasePrice: 10, salePrice: 20, taxRate: 0, quantity: 0, minQuantity: 0), throwsStateError);
     await expectLater(products.update(businessId: businessId, productId: second['id'] as String, name: 'Second', sku: 'B', barcode: '123456', purchasePrice: 10, salePrice: 20, taxRate: 0, minQuantity: 0), throwsStateError);
   });
 
