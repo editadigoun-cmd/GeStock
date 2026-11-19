@@ -16,7 +16,7 @@
 - Initial stock and stock adjustments, with a durable offline outbox and movement history.
 - Offline POS sale, line/payment records, local stock deduction and sale sync queue.
 - Backend sale creation, sale history/detail, stock movements, atomic stock updates and idempotent sync.
-- Admin web console is real-data read-only: overview, businesses, recent sales/payments, low-stock products and sync operations/statuses. Empty D1 results are displayed as empty, not demo data.
+- Admin web console is real-data read-only: overview, businesses, recent sales/payments, low-stock products, sync operations/statuses, and a searchable user directory (active business/organization memberships, devices, and last sync activity). Empty D1 results are displayed as empty, not demo data. The directory endpoint is `GET /v1/admin/users`; user/role mutation, invitations, and detailed permissions remain missing.
 - SQLite schema is version 4. The migration adds `default_warehouse_id` to existing local business databases. Offline workflow tests cover business setup, catalogue, opening stock, adjustments, POS and outbox, plus pending product-edit coalescing.
 
 ## Remaining manual blocker
