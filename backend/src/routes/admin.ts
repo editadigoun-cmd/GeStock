@@ -3,7 +3,7 @@ import { and, desc, eq, sql } from 'drizzle-orm';
 import { db } from '../services/db.js';
 import {
   appUsers, businesses, products, sales, salePayments, stockMovements, syncOperations,
-  businessMemberships, syncDevices, stockLevels, warehouses,
+  syncDevices, stockLevels, warehouses,
 } from '../schema.js';
 import { summarizeSyncStatuses } from '../services/admin-summary.js';
 import type { AppEnv } from '../middleware/auth.js';
@@ -28,7 +28,7 @@ adminRoutes.get('/overview', async (c) => {
   const [movementCount] = await db.select({ count: sql.raw('count(*)').mapWith(Number) }).from(stockMovements);
   const [pending] = await db.select({ count: sql.raw('count(*)').mapWith(Number) }).from(syncOperations).where(eq(syncOperations.status, 'queued'));
   const [conflicts] = await db.select({ count: sql.raw('count(*)').mapWith(Number) }).from(syncOperations).where(eq(syncOperations.status, 'conflict'));
-  const revenueByCurrency = await db.select({ currency_code: sales.currencyCode, total: sql.raw('COALESCE(SUM(sales.total), 0)').mapWith(Number }).from(sales).where(eq(sales.status, 'completed')).groupBy(sales.currencyCode);
+  const revenueByCurrency = await db.select({ currency_code: sales.currencyCode, total: sql.raw('COALESCE(SUM(sales.total), 0)').mapWith(Number) }).from(sales).where(eq(sales.status, 'completed')).groupBy(sales.currencyCode);
   const [active] = await db.select({ count: sql.raw('count(*)').mapWith(Number) }).from(businesses).where(eq(businesses.status, 'active'));
   return c.json({ data: {
     users: users.count, businesses: businessCount.count, active_businesses: active.count,
