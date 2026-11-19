@@ -16,6 +16,16 @@ app.use('/v1/*', cors({
   allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
 }));
 app.get('/health', (c) => c.json({ ok: true, service: 'gestock-api', version: '0.2.0' }));
+app.get('/health/d1', async (c) => {
+  try {
+    if (!c.env.DB) return c.json({ ok: false, database: 'D1_NOT_BOUND' }, 503);
+    const row = await c.env.DB.prepare("SELECT COUNT(*) AS table_count FROM sqlite_master WHERE type='table' AND name NOT LIKE '_cf_%'").first<{ table_count: number }>();
+    return c.json({ ok: true, database: 'gestock-db', table_count: row?.table_count ?? 0 });
+  } catch (error) {
+    console.error('D1 health check failed', error);
+    return c.json({ ok: false, database: 'D1_UNAVAILABLE' }, 503);
+  }
+});
 app.use('/v1/*', authGuard);
 app.use('/v1/*', async (c, next) => {
   try {
