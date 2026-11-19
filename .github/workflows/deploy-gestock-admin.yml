@@ -32,6 +32,10 @@ jobs:
           node-version: 22
       - name: Install current admin dependencies
         run: npm install
+      - name: Dependency audit report (non-blocking until remediation)
+        run: |
+          npm audit --json > npm-audit.json || true
+          node -e "const a=require('./npm-audit.json'); console.log('Audit severity counts:', JSON.stringify(a.metadata?.vulnerabilities)); for (const [name,v] of Object.entries(a.vulnerabilities||{})) { console.log(name, v.severity, v.range, 'fixAvailable=', JSON.stringify(v.fixAvailable)); for (const via of v.via||[]) if (typeof via==='object') console.log('  ',via.title,via.url||''); }"
       - name: Check Next.js compatibility with vinext
         run: npx --yes vinext check
       - name: Configure Cloudflare Workers deployment
