@@ -7,7 +7,7 @@
 - Admin Cloudflare deployment run `44617270299` succeeded. CI verified the unauthenticated admin path redirects to Cloudflare Access (HTTP 302).
 - Cloudflare Access application is allowlisted for `editadigoun@gmail.com`, session 24 hours.
 - D1 `gestock-db`: 27 application tables. Migration records 0001–0005 are present. User/business/product/sale counts were 0 at inspection; the auth tables are present.
-- Active Cloudflare Workers: `gestock-api` and `gestock-admin`. The legacy auth-proxy Worker and its obsolete admin secret were removed. No Vercel deployment is configured.
+- Only the Cloudflare API and admin Workers remain active. The legacy auth proxy and obsolete secret were removed.
 
 ## Cloudflare-native auth verified
 - Registration/login, `/auth/me`, password change, new-password login, rejection of old password, logout revocation and rejection of revoked session were exercised against the deployed API in CI.
