@@ -2,6 +2,16 @@ import 'dart:convert';
 import 'package:uuid/uuid.dart';
 import 'package:sqflite/sqflite.dart';
 import '../local/gestock_database.dart';
+String defaultCurrencyForCountry(String countryCode) => switch (countryCode) {
+  'FR' => 'EUR', 'US' => 'USD', 'GB' => 'GBP', 'CM' => 'XAF', 'NG' => 'NGN', 'GH' => 'GHS',
+  _ => 'XOF',
+};
+
+String defaultTimezoneForCountry(String countryCode) => switch (countryCode) {
+  'BJ' => 'Africa/Porto-Novo', 'TG' => 'Africa/Lome', 'CI' => 'Africa/Abidjan',
+  'SN' => 'Africa/Dakar', 'CM' => 'Africa/Douala', 'NG' => 'Africa/Lagos', 'GH' => 'Africa/Accra',
+  'FR' => 'Europe/Paris', 'GB' => 'Europe/London', 'US' => 'America/New_York', _ => 'UTC',
+};
 class BusinessRepository {
  BusinessRepository(this.db);
  final GeStockDatabase db;final _uuid=const Uuid();
@@ -14,7 +24,7 @@ class BusinessRepository {
  Future<void> setActive(String id)async{final d=await db.database;await d.insert('app_settings',{'key':'active_business_id','value':id},conflictAlgorithm:ConflictAlgorithm.replace);}
  Future<void> create({required String name,required String type,required String country,required String currency})async{
   final d=await db.database;final id=_uuid.v4();final warehouseId=_uuid.v4();final now=DateTime.now().toUtc().toIso8601String();
-  final zone=switch(country){'BJ'=>'Africa/Porto-Novo','TG'=>'Africa/Lome','CI'=>'Africa/Abidjan','SN'=>'Africa/Dakar','CM'=>'Africa/Douala','FR'=>'Europe/Paris',_=>'UTC'};
+  final zone=defaultTimezoneForCountry(country);
   final payload={'id':id,'name':name.trim(),'business_type':type,'country_code':country,'currency_code':currency,'timezone':zone,'default_warehouse_id':warehouseId};
   await d.transaction((txn)async{
    await txn.insert('businesses',{...payload,'created_at':now,'sync_state':'pending'});
