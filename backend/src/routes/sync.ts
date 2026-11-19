@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../services/db.js';
 import { appUsers, businesses, businessMemberships, organizationMemberships, organizations, products, stockMovements, stockLevels, syncDevices, syncOperations, warehouses } from '../schema.js';
+import { saleInputSchema, createSaleTransaction } from '../services/sales.js';
 import type { AppEnv } from '../middleware/auth.js';
 
 export const syncRoutes = new Hono<AppEnv>();
@@ -38,7 +39,7 @@ syncRoutes.post('/devices/register', async (c) => {
 const operationSchema = z.object({
   id: z.string().uuid(),
   business_id: z.string().uuid(),
-  entity_type: z.enum(['business', 'product', 'stock_movement']),
+  entity_type: z.enum(['business', 'product', 'stock_movement', 'sale']),
   entity_id: z.string().uuid(),
   operation: z.string().min(1).max(40),
   payload: z.record(z.unknown()),
@@ -111,6 +112,15 @@ async function applyOperation(authSubject: string, deviceId: string, op: z.infer
     .where(and(eq(businessMemberships.businessId, op.business_id), eq(businessMemberships.userId, user.id), eq(businessMemberships.status, 'active'))).limit(1);
   if (!membership) throw new Error('FORBIDDEN');
 
+  if (op.entity_type === 'sale') {
+    const parsedSale = saleInputSchema.safeParse({ ...op.payload, id: op.entity_id, business_id: op.business_id });
+    if (!parsedSale.success) throw new Error('INVALID_SALE_PAYLOAD');
+    if (op.operation !== 'create') throw new Error('INVALID_SALE_OPERATION');
+    const result = { id: op.entity_id, synced: true };
+    const outcome = await createSaleTransaction(user.id, parsedSale.data, operationRecord(deviceId, op, result));
+    return { status: 'applied', result: { ...result, duplicate: outcome.duplicate }, duplicate: outcome.duplicate };
+  }
+
   if (op.entity_type === 'product') {
     const p = op.payload;
     const productId = String(p.id ?? op.entity_id);
@@ -121,14 +131,15 @@ async function applyOperation(authSubject: string, deviceId: string, op: z.infer
       id: productId, businessId: op.business_id, name, sku: p.sku ? String(p.sku) : null,
       barcode: p.barcode ? String(p.barcode) : null, unit: String(p.unit ?? 'unité'),
       purchasePrice: Number(p.purchase_price ?? 0), salePrice: Number(p.sale_price ?? 0),
-      taxRate: Number(p.tax_rate ?? 0), updatedAt: p.updated_at ? String(p.updated_at) : new Date().toISOString(),
+      taxRate: Number(p.tax_rate ?? 0), metadata: { min_quantity: Number(p.min_quantity ?? 0) },
+      updatedAt: p.updated_at ? String(p.updated_at) : new Date().toISOString(),
     };
-    if (![values.purchasePrice, values.salePrice, values.taxRate].every(v => Number.isFinite(v) && v >= 0)) throw new Error('INVALID_PRODUCT_PRICES');
+    if (![values.purchasePrice, values.salePrice, values.taxRate, values.metadata.min_quantity].every(v => Number.isFinite(v) && v >= 0)) throw new Error('INVALID_PRODUCT_PRICES');
     const [current] = await db.select({ id: products.id, businessId: products.businessId }).from(products).where(eq(products.id, productId)).limit(1);
     if (current && current.businessId !== op.business_id) throw new Error('PRODUCT_BUSINESS_MISMATCH');
     const result = { id: productId, synced: true };
     const write = current
-      ? db.update(products).set({ name: values.name, sku: values.sku, barcode: values.barcode, unit: values.unit, purchasePrice: values.purchasePrice, salePrice: values.salePrice, taxRate: values.taxRate, updatedAt: values.updatedAt }).where(eq(products.id, productId))
+      ? db.update(products).set({ name: values.name, sku: values.sku, barcode: values.barcode, unit: values.unit, purchasePrice: values.purchasePrice, salePrice: values.salePrice, taxRate: values.taxRate, metadata: values.metadata, updatedAt: values.updatedAt }).where(eq(products.id, productId))
       : db.insert(products).values(values);
     await db.batch([write, db.insert(syncOperations).values(operationRecord(deviceId, op, result))]);
     return { status: 'applied', result, duplicate: false };
@@ -190,4 +201,4 @@ syncRoutes.post('/batch', async (c) => {
     }
   }
   return c.json({ data: results });
-});
+}

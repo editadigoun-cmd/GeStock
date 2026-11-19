@@ -6,8 +6,9 @@ export type AppBindings = {
   AUTH_ISSUER: string;
   AUTH_AUDIENCE?: string;
   AUTH_JWKS_URL: string;
+  ADMIN_EMAIL?: string;
 };
-export type AppEnv = { Bindings: AppBindings; Variables: { userId: string } };
+export type AppEnv = { Bindings: AppBindings; Variables: { userId: string; email: string; emailVerified: boolean } };
 
 const jwksCache = new Map<string, JWTVerifyGetKey>();
 
@@ -27,6 +28,8 @@ export const authGuard: MiddlewareHandler<AppEnv> = async (c, next) => {
     const { payload } = await jwtVerify(header.slice(7), jwks, verification);
     if (!payload.sub) return c.json({ error: 'UNAUTHORIZED' }, 401);
     c.set('userId', payload.sub);
+    c.set('email', typeof payload.email === 'string' ? payload.email.toLowerCase() : '');
+    c.set('emailVerified', payload.email_verified === true || payload.emailVerified === true);
     await next();
   } catch {
     return c.json({ error: 'UNAUTHORIZED' }, 401);

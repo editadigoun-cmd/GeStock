@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, sql, desc } from 'drizzle-orm';
 import { db } from '../services/db.js';
 import { hasBusinessAccess } from '../services/access.js';
 import { products, warehouses, stockLevels, stockMovements } from '../schema.js';
@@ -32,8 +32,6 @@ stockRoutes.post('/movements', async (c) => {
 
   const now = new Date().toISOString();
   const movementId = crypto.randomUUID();
-  // D1 batches are atomic. The stock-level triggers added by migration 0002
-  // abort the whole batch if a movement would make inventory negative.
   await db.batch([
     db.insert(stockMovements).values({
       id: movementId, businessId: input.business_id, warehouseId: input.warehouse_id,
@@ -58,5 +56,20 @@ stockRoutes.get('/levels', async (c) => {
   if (!businessId) return c.json({ error: 'BUSINESS_REQUIRED' }, 400);
   if (!await hasBusinessAccess(c.get('userId'), businessId)) return c.json({ error: 'FORBIDDEN' }, 403);
   const rows = await db.select().from(stockLevels).where(eq(stockLevels.businessId, businessId));
+  return c.json({ data: rows });
+});
+
+stockRoutes.get('/movements', async (c) => {
+  const businessId = c.req.query('business_id');
+  if (!businessId) return c.json({ error: 'BUSINESS_REQUIRED' }, 400);
+  if (!await hasBusinessAccess(c.get('userId'), businessId)) return c.json({ error: 'FORBIDDEN' }, 403);
+  const productId = c.req.query('product_id');
+  const rows = await db.select({
+    id: stockMovements.id, business_id: stockMovements.businessId, warehouse_id: stockMovements.warehouseId,
+    product_id: stockMovements.productId, product_name: products.name, movement_type: stockMovements.movementType,
+    quantity_delta: stockMovements.quantityDelta, note: stockMovements.note, occurred_at: stockMovements.occurredAt,
+  }).from(stockMovements).leftJoin(products, eq(products.id, stockMovements.productId))
+    .where(productId ? and(eq(stockMovements.businessId, businessId), eq(stockMovements.productId, productId)) : eq(stockMovements.businessId, businessId))
+    .orderBy(desc(stockMovements.occurredAt)).limit(100);
   return c.json({ data: rows });
 });

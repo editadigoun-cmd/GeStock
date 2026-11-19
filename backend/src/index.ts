@@ -7,6 +7,8 @@ import { productRoutes } from './routes/products.js';
 import { syncRoutes } from './routes/sync.js';
 import { stockRoutes } from './routes/stock.js';
 import { businessRoutes } from './routes/businesses.js';
+import { salesRoutes } from './routes/sales.js';
+import { adminRoutes } from './routes/admin.js';
 
 const app = new Hono<AppEnv>();
 app.use('*', logger());
@@ -15,7 +17,7 @@ app.use('/v1/*', cors({
   allowHeaders: ['Authorization', 'Content-Type'],
   allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
 }));
-app.get('/health', (c) => c.json({ ok: true, service: 'gestock-api', version: '0.2.0' }));
+app.get('/health', (c) => c.json({ ok: true, service: 'gestock-api', version: '0.3.0' }));
 app.get('/health/d1', async (c) => {
   try {
     if (!c.env.DB) return c.json({ ok: false, database: 'D1_NOT_BOUND' }, 503);
@@ -40,6 +42,8 @@ app.route('/v1/businesses', businessRoutes);
 app.route('/v1/products', productRoutes);
 app.route('/v1/sync', syncRoutes);
 app.route('/v1/stock', stockRoutes);
+app.route('/v1/sales', salesRoutes);
+app.route('/v1/admin', adminRoutes);
 app.notFound((c) => c.json({ error: 'NOT_FOUND' }, 404));
 app.onError((error, c) => {
   console.error(error);

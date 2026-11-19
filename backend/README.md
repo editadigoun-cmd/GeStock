@@ -1,19 +1,25 @@
 # GeStock API — Cloudflare Workers
 
-The API runs as a Cloudflare Worker, uses Hono for routing, Neon PostgreSQL through Cloudflare Hyperdrive, and Neon Managed Auth JWT verification.
+The production API is TypeScript + Hono on Cloudflare Workers. Domain data is stored in Cloudflare D1 (gestock-db); user identity and login remain on Neon Managed Auth. D1 is not a verified migration of the existing Neon database.
 
-## Cloudflare setup
+## Deploy and verify
+1. Set the GitHub Actions secret CLOUDFLARE_API_TOKEN with permissions to deploy Workers and apply D1 migrations.
+2. Push to main. Quality checks run Flutter analyze/tests, backend typecheck/tests, then apply versioned D1 migrations and deploy the API.
+3. The workflow verifies /health and /health/d1.
 
-1. Create the Hyperdrive configuration `gestock-neon-main` for the existing Neon database `gestock` on branch `main`.
-2. Keep Hyperdrive query caching disabled.
-3. The Hyperdrive ID and Neon Auth issuer/JWKS URL are configured in `wrangler.jsonc`.
-4. In GitHub repository Settings > Secrets and variables > Actions, add `CLOUDFLARE_API_TOKEN` with a Cloudflare API token that can deploy Workers scripts.
-5. A push to `main` runs type checks and then deploys the API to Cloudflare. Without the secret, deployment is skipped.
+The current D1 schema contains the 24 application tables from migrations 0001–0003. It was verified on 19 November 2026; the business, user, catalogue, sales, stock and sync tables were empty at that check. Existing Neon data was not modified or deleted.
 
-Never put Neon database credentials or API tokens in Git. Hyperdrive owns the database credentials; the Worker receives only its binding.
+## API capabilities
+- Businesses: create/list, membership-scoped.
+- Products: create/list and offline upsert synchronization.
+- Stock: atomic movements, current levels and movement history; negative stock blocked by D1 triggers.
+- Sales: atomic sale, sale lines, payment record and stock deduction; sync is idempotent.
+- Sync: device registration and batches for business, product, stock movement and sale.
+- Platform admin: read-only overview and business list restricted to the verified administrator email.
 
-## Health check and mobile
+Mobile Money/card/bank payment records remain pending until an external provider is integrated and verifies payment. No payment provider is currently connected.
 
-After deployment, `GET /health` returns the API health response. Authenticated routes require a valid Neon Auth access token.
+## Authentication
+The API validates Neon Managed Auth JWTs using the configured issuer and JWKS. The admin API also requires a verified email claim matching ADMIN_EMAIL. Native mobile continues to use Neon Auth and secure device storage.
 
-The mobile client must be built with `--dart-define=GESTOCK_API_URL=https://gestock-api.<your-workers-subdomain>.workers.dev` after deployment. Do not enable client sync until health, JWT validation, database access, and an end-to-end sync batch pass.
+Never put Neon credentials or Cloudflare tokens in Git. The D1 binding is named DB.

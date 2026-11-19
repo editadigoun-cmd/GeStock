@@ -29,8 +29,10 @@ jobs:
         working-directory: backend
       - run: npm run typecheck
         working-directory: backend
+      - run: npm run test
+        working-directory: backend
   deploy:
-    needs: backend
+    needs: [backend, flutter]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     env:

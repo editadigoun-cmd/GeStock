@@ -3,6 +3,7 @@ import '../data/local/gestock_database.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/repositories/business_repository.dart';
 import '../data/repositories/product_repository.dart';
+import '../data/repositories/sales_repository.dart';
 import '../data/services/sync_service.dart';
 
 final databaseProvider = Provider<GeStockDatabase>((ref) {
@@ -12,6 +13,7 @@ final databaseProvider = Provider<GeStockDatabase>((ref) {
 });
 final businessRepositoryProvider = Provider((ref) => BusinessRepository(ref.watch(databaseProvider)));
 final productRepositoryProvider = Provider((ref) => ProductRepository(ref.watch(databaseProvider)));
+final salesRepositoryProvider = Provider((ref) => SalesRepository(ref.watch(databaseProvider)));
 final authRepositoryProvider = Provider((ref) => AuthRepository());
 final syncServiceProvider = Provider((ref) => SyncService(
   database: ref.watch(databaseProvider),

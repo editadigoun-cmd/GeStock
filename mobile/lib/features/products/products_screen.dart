@@ -81,7 +81,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                Text('${product['sale_price']} F', style: const TextStyle(fontWeight: FontWeight.w900)),
+                                Text('${product['sale_price']} ${business['currency_code']}', style: const TextStyle(fontWeight: FontWeight.w900)),
                                 Text(low ? 'Stock bas' : 'Disponible', style: TextStyle(fontSize: 9, color: low ? GeStockColors.red : GeStockColors.muted, fontWeight: FontWeight.w700)),
                               ],
                             ),

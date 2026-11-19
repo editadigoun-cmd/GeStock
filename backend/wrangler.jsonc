@@ -12,7 +12,8 @@
   },
   "vars": {
     "AUTH_ISSUER": "https://ep-holy-boat-banyu93m.neonauth.c-8.eu-central-1.aws.neonauth.tech",
-    "AUTH_JWKS_URL": "https://ep-holy-boat-banyu93m.neonauth.c-8.eu-central-1.aws.neonauth.tech/gestock/auth/.well-known/jwks.json"
+    "AUTH_JWKS_URL": "https://ep-holy-boat-banyu93m.neonauth.c-8.eu-central-1.aws.neonauth.tech/gestock/auth/.well-known/jwks.json",
+    "ADMIN_EMAIL": "editadigoun@gmail.com"
   },
   "d1_databases": [
     {
