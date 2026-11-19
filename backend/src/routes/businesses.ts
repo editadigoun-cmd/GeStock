@@ -34,28 +34,36 @@ businessRoutes.post('/', async (c) => {
   const parsed = schema.safeParse(await c.req.json());
   if (!parsed.success) return c.json({ error: 'VALIDATION_ERROR', details: parsed.error.flatten() }, 422);
   const input = parsed.data;
-  const result = await db.transaction(async (tx) => {
-    let [user] = await tx.select().from(appUsers).where(eq(appUsers.authSubject, c.get('userId'))).limit(1);
-    if (!user) [user] = await tx.insert(appUsers).values({ authSubject: c.get('userId') }).returning();
-    const [org] = await tx.insert(organizations).values({ name: input.name, ownerUserId: user.id }).returning();
-    await tx.insert(organizationMemberships).values({ organizationId: org.id, userId: user.id, role: 'owner', status: 'active' });
-    const [business] = await tx.insert(businesses).values({
-      organizationId: org.id,
-      name: input.name,
-      businessType: input.business_type,
-      countryCode: input.country_code,
-      currencyCode: input.currency_code,
-      timezone: input.timezone,
-    }).returning();
-    await tx.insert(businessMemberships).values({
-      businessId: business.id,
-      userId: user.id,
-      role: 'owner',
-      permissions: { all: true },
-      status: 'active',
-    });
-    await tx.insert(warehouses).values({ businessId: business.id, name: 'Dépôt principal', isDefault: true });
-    return business;
-  });
-  return c.json({ data: result }, 201);
+  const subject = c.get('userId');
+
+  // D1 has no interactive SQL transactions. Ensure the user idempotently, then
+  // create the organization/business/memberships/warehouse in one atomic batch.
+  await db.insert(appUsers).values({ authSubject: subject }).onConflictDoNothing();
+  const [user] = await db.select({ id: appUsers.id }).from(appUsers)
+    .where(eq(appUsers.authSubject, subject)).limit(1);
+  if (!user) return c.json({ error: 'USER_CREATE_FAILED' }, 503);
+
+  const orgId = crypto.randomUUID();
+  const businessId = crypto.randomUUID();
+  const orgMembershipId = crypto.randomUUID();
+  const businessMembershipId = crypto.randomUUID();
+  const warehouseId = crypto.randomUUID();
+
+  await db.batch([
+    db.insert(organizations).values({ id: orgId, name: input.name, ownerUserId: user.id }),
+    db.insert(organizationMemberships).values({ id: orgMembershipId, organizationId: orgId, userId: user.id, role: 'owner', status: 'active' }),
+    db.insert(businesses).values({
+      id: businessId, organizationId: orgId, name: input.name,
+      businessType: input.business_type, countryCode: input.country_code,
+      currencyCode: input.currency_code, timezone: input.timezone,
+    }),
+    db.insert(businessMemberships).values({
+      id: businessMembershipId, businessId, userId: user.id,
+      role: 'owner', permissions: { all: true }, status: 'active',
+    }),
+    db.insert(warehouses).values({ id: warehouseId, businessId, name: 'Dépôt principal', isDefault: 1 }),
+  ]);
+
+  const [created] = await db.select().from(businesses).where(eq(businesses.id, businessId)).limit(1);
+  return c.json({ data: created }, 201);
 });
