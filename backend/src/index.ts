@@ -19,7 +19,7 @@ app.get('/health', (c) => c.json({ ok: true, service: 'gestock-api', version: '0
 app.get('/health/d1', async (c) => {
   try {
     if (!c.env.DB) return c.json({ ok: false, database: 'D1_NOT_BOUND' }, 503);
-    const row = await c.env.DB.prepare("SELECT COUNT(*) AS table_count FROM sqlite_master WHERE type='table' AND name NOT LIKE '_cf_%'").first<{ table_count: number }>();
+    const row = await c.env.DB.prepare("SELECT COUNT(*) AS table_count FROM sqlite_master WHERE type='table' AND name NOT LIKE '_cf_%' AND name NOT LIKE 'd1_%'").first<{ table_count: number }>();
     return c.json({ ok: true, database: 'gestock-db', table_count: row?.table_count ?? 0 });
   } catch (error) {
     console.error('D1 health check failed', error);
