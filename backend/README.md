@@ -1,13 +1,14 @@
 # GeStock API — Cloudflare Workers
 
-The production API is TypeScript + Hono on Cloudflare Workers. Domain data is stored in Cloudflare D1 (gestock-db); user identity and login remain on Neon Managed Auth. D1 is not a verified migration of the existing Neon database.
+The production API is TypeScript + Hono on Cloudflare Workers. Application data and identity are stored in Cloudflare D1 (`gestock-db`). No external authentication or database provider is used by the runtime.
 
 ## Deploy and verify
-1. Set the GitHub Actions secret CLOUDFLARE_API_TOKEN with permissions to deploy Workers and apply D1 migrations.
-2. Push to main. Quality checks run Flutter analyze/tests, backend typecheck/tests, then apply versioned D1 migrations and deploy the API.
-3. The workflow verifies /health and /health/d1.
+1. Set GitHub Actions secret `CLOUDFLARE_API_TOKEN` with permissions to deploy Workers and apply D1 migrations.
+2. Push to `main`. Quality checks run Flutter analysis/tests, backend typecheck/tests, then apply versioned D1 migrations and deploy the API.
+3. The workflow verifies `/health`, `/health/d1`, and registration/login/session/password-change/logout flows against the deployed API.
 
-The current D1 schema contains the 24 application tables from migrations 0001–0003. It was verified on 19 November 2026; the business, user, catalogue, sales, stock and sync tables were empty at that check. Existing Neon data was not modified or deleted.
+## D1
+Migrations 0001–0005 are applied to the production D1 database. The auth migrations are additive and do not delete existing domain records. At the latest inspection, the application user/business/product/sale tables were empty. Do not drop the D1 database or auth tables for rollback.
 
 ## API capabilities
 - Businesses: create/list, membership-scoped.
@@ -15,15 +16,18 @@ The current D1 schema contains the 24 application tables from migrations 0001–
 - Stock: atomic movements, current levels and movement history; negative stock blocked by D1 triggers.
 - Sales: atomic sale, sale lines, payment record and stock deduction; sync is idempotent.
 - Sync: device registration and batches for business, product, stock movement and sale.
-- Platform admin: read-only overview, business list, sales, inventory/low-stock, sync operations, and user directory (`GET /v1/admin/users`) restricted to the verified administrator email. The user directory supports email/name search and reports active memberships, devices, and last sync; user/role CRUD and invitations are not implemented.
+- Platform admin: read-only overview, businesses, sales, inventory/low-stock, sync operations and user directory. User/role CRUD and invitations are not implemented.
 
-Mobile Money/card/bank payment records remain pending until an external provider is integrated and verifies payment. No payment provider is currently connected.
+Mobile Money/card/bank payment records remain pending until an external provider verifies payment. No payment provider is connected.
 
 ## Admin web access
-
-The Cloudflare Workers admin host is protected by Cloudflare Access with an allow policy for `editadigoun@gmail.com`. The deployment workflow first verifies the edge login redirect, then sets `CLOUDFLARE_ACCESS_ENABLED=true` for the Worker. Admin API calls additionally require a verified Neon Auth JWT for the configured administrator. Native mobile uses Neon Auth independently. The Vercel deployment URL is not covered by this Access application and remains protected by Neon Auth.
+The Cloudflare Workers admin host is protected by Cloudflare Access with an allow policy for `editadigoun@gmail.com`. Admin API calls forward the Access JWT server-side; the API validates issuer, audience and allowlisted email. The mobile client uses D1 sessions and secure device storage.
 
 ## Authentication
-The API validates Neon Managed Auth JWTs using the configured issuer and JWKS. The admin API also requires a verified email claim matching ADMIN_EMAIL. Native mobile continues to use Neon Auth and secure device storage.
+- Register/login with salted PBKDF2-SHA-256 (100,000 iterations).
+- 256-bit random bearer tokens; SHA-256 digests stored in D1; 30-day expiry and revocation.
+- Login/register rate limiting.
+- Password change revokes other sessions.
+- Email verification and recovery email are not implemented. A support/admin recovery flow remains a release blocker.
 
-Never put Neon credentials or Cloudflare tokens in Git. The D1 binding is named DB.
+Never commit secrets. The D1 binding is named `DB`.

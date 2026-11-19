@@ -1,30 +1,38 @@
 # GeStock
 
-GeStock is an offline-first business management app for independent businesses and multi-company operators.
+GeStock is an offline-first business management application for independent businesses and multi-company operators.
 
 ## Core workflows
-- Mobile registration/login using Cloudflare Worker endpoints; secure session token storage on device.
-- Multi-business setup, product catalogue, opening stock and adjustments, offline POS and durable sync.
-- API, admin console and D1 data on Cloudflare.
-- Admin console protected by Cloudflare Access and restricted to the administrator identity.
+- Cloudflare-native mobile registration and login with secure token storage.
+- Multi-business setup, product catalogue, stock movements, offline POS and durable synchronization.
+- Cloudflare Workers API and web administration; Cloudflare D1 for application data.
+- Administrator console protected at the edge by Cloudflare Access.
 
 ## Architecture
 - Cloudflare Workers: API and web administration.
-- Cloudflare D1: domain data, account password hashes and hashed sessions.
+- Cloudflare D1: domain data, password hashes, hashed sessions and rate limits.
 - Cloudflare Access: administrator SSO and API authorization.
 - Flutter/Dart, Riverpod and SQLite on mobile.
 - GitHub main branch only.
 
-Cloudflare-native auth is implemented in source but awaiting deployment and live verification. No alternative hosting, external auth provider, or external database is intended. Legacy auth resources remain in a controlled rollback window and must be removed after the new APK/API/Admin are validated and adoption is confirmed.
+## Verification
+The latest main CI run completed backend tests/typecheck, Flutter analysis/tests, D1 migrations, API health checks and an end-to-end authentication smoke test. The latest Android release build passed signature and SHA-256 checks. See [implementation status](docs/IMPLEMENTATION_STATUS.md) and the [migration/rollback plan](docs/AUTH_MIGRATION_ROLLBACK.md).
+
+## Current limitations
+The admin console is a monitoring/read-only dashboard. User/role CRUD, invitations, email verification/password recovery, several inventory/POS workflows, physical-device sync testing and store publication are not complete. Do not treat this as a production-ready public release yet.
 
 ## Repository
 - mobile/: Flutter app.
-- backend/: Worker API, D1 migrations and tests.
-- admin/: web console.
-- docs/: architecture/status.
+- backend/: Cloudflare Worker API, D1 migrations and tests.
+- admin/: Cloudflare Worker web console.
+- docs/: architecture, status and migration/rollback plan.
 
 ## Run mobile
-cd mobile; flutter pub get; flutter run
+```sh
+cd mobile
+flutter pub get
+flutter run
+```
 
 ## Android
-The latest test APK is published in the android-latest GitHub release, if that release workflow has completed. Verify the checksum before installing. Production signing/AAB and store publication remain separate release requirements.
+The latest APK is published in the `android-latest` GitHub release. Verify its accompanying SHA-256 file before installing. Play Store production signing/AAB and store publication are separate release requirements.

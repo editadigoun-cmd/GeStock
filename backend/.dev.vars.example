@@ -1,4 +1,4 @@
-# Local-only values. Copy to .dev.vars; never commit real secrets.
-AUTH_ISSUER=
-AUTH_AUDIENCE=
-AUTH_JWKS_URL=
+# Local-only values. Copy to .dev.vars; never commit secrets.
+ADMIN_EMAIL=editadigoun@gmail.com
+ACCESS_ISSUER=https://dark-bush-1837.cloudflareaccess.com
+ACCESS_AUDIENCE=4143db25e4dd2576066db38722c7c5138f9a17f699eafef5d8ab85c95162c689
