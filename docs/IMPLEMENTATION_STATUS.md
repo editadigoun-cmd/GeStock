@@ -19,9 +19,14 @@
 - Admin web console is real-data read-only: overview, businesses, recent sales/payments, low-stock products, sync operations/statuses, and a searchable user directory (active business/organization memberships, devices, and last sync activity). Empty D1 results are displayed as empty, not demo data. The directory endpoint is `GET /v1/admin/users`; user/role mutation, invitations, and detailed permissions remain missing.
 - SQLite schema is version 4. The migration adds `default_warehouse_id` to existing local business databases. Offline workflow tests cover business setup, catalogue, opening stock, adjustments, POS and outbox, plus pending product-edit coalescing.
 
-## Remaining manual blocker
+## Security verification
 
-- Cloudflare Access is not enabled on account `ed1783922fcd87086ef7757e242fc0f2`. The API returns `access.api.error.not_enabled` and instructs the dashboard Enable Access action. Enable Access on `gestock-admin`, then the allow policy for `editadigoun@gmail.com` can be created. Access identity headers are not trusted while edge protection is disabled. Web admin still requires Neon Auth in addition to Access; this is intentionally not replaced without verified authorization.
+- Cloudflare Access organization **GeStock Admin** is enabled in account `ed1783922fcd87086ef7757e242fc0f2` (created through the supported API). Login domain: `dark-bush-1837.cloudflareaccess.com`.
+- Access application `GeStock Admin Console` protects `gestock-admin.ccds22431.workers.dev` (app ID `3b0bbfec-3667-45c7-8691-a117d47fc269`) with a 24-hour session. Policy `Allow GeStock Administrator` (ID `bb1633ad-7f68-43da-876b-4a5e92ede12a`) allows only `editadigoun@gmail.com`.
+- The Cloudflare deployment workflow verified the unauthenticated edge redirect to Cloudflare Access in run [44561527098](https://github.com/editadigoun-cmd/GeStock/actions/runs/44561527098) before setting the Worker secret `CLOUDFLARE_ACCESS_ENABLED=true`. The admin Worker therefore trusts Access identity headers only after edge enforcement passed. Neon Auth remains required for the admin session/API token as a second layer. Native mobile remains on Neon Auth.
+- Vercel deployments are not covered by this Access application; the alternate Vercel admin still relies on Neon Auth and administrator checks. Use the Cloudflare Worker URL as the canonical Access-protected console.
+
+## Remaining blockers
 - Admin user/role CRUD, billing/subscriptions, ads, support, audit UI and global settings need backend capabilities.
 - Mobile provider-confirmed payments, cash sessions, refunds/returns, purchasing, customers/credit, receipt printing, multi-warehouse transfers and conflict-resolution UI remain incomplete.
 - Production Android signing, a signed Play Store AAB, iOS, store release and real-device testing are not verified.
