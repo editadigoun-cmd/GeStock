@@ -57,6 +57,32 @@ void main() {
     expect(await sales.pendingCount(businessId), 1);
   });
 
+  test('external payment methods stay pending until a provider confirms them', () async {
+    final businesses = BusinessRepository(db);
+    final products = ProductRepository(db);
+    final sales = SalesRepository(db);
+    await businesses.create(name: 'Boutique paiement', type: 'commerce', country: 'BJ', currency: 'XOF');
+    final business = (await businesses.active())!;
+    final businessId = business['id'] as String;
+    await products.save(
+      businessId: businessId, name: 'Produit paiement', sku: 'PAY-01', barcode: '',
+      purchasePrice: 100, salePrice: 250, taxRate: 0, quantity: 2, minQuantity: 0,
+    );
+    final product = (await products.list(businessId)).single;
+    final saleId = await sales.createSale(
+      businessId: businessId, currencyCode: 'XOF',
+      quantities: {product['id'] as String: 1}, paymentMethod: 'mobile_money',
+    );
+    final sale = (await sales.list(businessId)).single;
+    expect(sale['id'], saleId);
+    expect(sale['payment_status'], 'pending');
+    expect(sale['amount_paid'], 0);
+    final database = await db.database;
+    final payment = (await database.query('sale_payments', where: 'sale_id = ?', whereArgs: [saleId])).single;
+    expect(payment['status'], 'pending');
+    expect(payment['paid_at'], isNull);
+  });
+
   test('editing a product coalesces its pending create and preserves stock', () async {
     final businesses = BusinessRepository(db);
     final products = ProductRepository(db);

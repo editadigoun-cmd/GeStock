@@ -7,20 +7,24 @@ import 'package:uuid/uuid.dart';
 import '../local/gestock_database.dart';
 import '../repositories/auth_repository.dart';
 
+typedef ConnectivityCheck = Future<List<ConnectivityResult>> Function();
+
 class SyncService {
-  SyncService({required this.database, required this.auth, Dio? dio, FlutterSecureStorage? secureStorage})
+  SyncService({required this.database, required this.auth, Dio? dio, FlutterSecureStorage? secureStorage, ConnectivityCheck? connectivityCheck})
       : _dio = dio ?? Dio(BaseOptions(
           baseUrl: const String.fromEnvironment('GESTOCK_API_URL'),
           connectTimeout: const Duration(seconds: 12),
           receiveTimeout: const Duration(seconds: 20),
           headers: {'Content-Type': 'application/json'},
         )),
-        _secureStorage = secureStorage ?? const FlutterSecureStorage();
+        _secureStorage = secureStorage ?? const FlutterSecureStorage(),
+        _connectivityCheck = connectivityCheck ?? (() => Connectivity().checkConnectivity());
 
   final GeStockDatabase database;
   final AuthRepository auth;
   final Dio _dio;
   final FlutterSecureStorage _secureStorage;
+  final ConnectivityCheck _connectivityCheck;
   static const _deviceKeyStorage = 'gestock_sync_device_key';
   static const _platformStorage = 'gestock_sync_platform';
   final _uuid = const Uuid();
@@ -48,7 +52,7 @@ class SyncService {
 
   Future<bool> syncPending() async {
     if (_dio.options.baseUrl.trim().isEmpty) return false;
-    final connectivity = await Connectivity().checkConnectivity();
+    final connectivity = await _connectivityCheck();
     if (connectivity.contains(ConnectivityResult.none)) return false;
     final token = await auth.getAccessToken();
     _dio.options.headers['Authorization'] = 'Bearer $token';
@@ -106,7 +110,13 @@ class SyncService {
           final attempts = (pending.firstWhere((row) => row['id'] == operationId, orElse: () => {'attempts': 0})['attempts'] as int? ?? 0) + 1;
           final status = result['status'] == 'rejected' ? 'failed' : 'conflict';
           await db.update('outbox', {'attempts': attempts, 'status': status}, where: 'id = ?', whereArgs: [operationId]);
-          if (operationType == 'sale') {
+          if (operationType == 'business') {
+            await db.update('businesses', {'sync_state': status}, where: 'id = ?', whereArgs: [operationRow['entity_id']]);
+          } else if (operationType == 'product') {
+            await db.update('products', {'sync_state': status}, where: 'id = ?', whereArgs: [operationRow['entity_id']]);
+          } else if (operationType == 'stock_movement') {
+            await db.update('stock_movements', {'sync_state': status}, where: 'id = ?', whereArgs: [operationRow['entity_id']]);
+          } else if (operationType == 'sale') {
             await db.update('sales', {'sync_state': status}, where: 'id = ?', whereArgs: [operationId]);
             await db.update('stock_movements', {'sync_state': status}, where: 'source_type = ? AND source_id = ?', whereArgs: ['sale', operationId]);
           }

@@ -169,7 +169,7 @@ adminRoutes.get('/movements', async (c) => {
     id: stockMovements.id, business_id: stockMovements.businessId, business_name: businesses.name,
     product_name: products.name, sku: products.sku, warehouse_name: warehouses.name,
     movement_type: stockMovements.movementType, quantity_delta: stockMovements.quantityDelta,
-    unit_cost: stockMovements.unitCost, source_type: stockMovements.sourceType, source_id: stockMovements.sourceId,
+    unit_cost: stockMovements.unitCost, currency_code: businesses.currencyCode, source_type: stockMovements.sourceType, source_id: stockMovements.sourceId,
     note: stockMovements.note, actor_email: appUsers.email, occurred_at: stockMovements.occurredAt,
   }).from(stockMovements)
     .leftJoin(products, eq(products.id, stockMovements.productId))
