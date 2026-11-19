@@ -1,14 +1,8 @@
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { Pool } from 'pg';
+import { drizzle } from 'drizzle-orm/d1';
 import * as schema from '../schema.js';
-
-type Database = ReturnType<typeof drizzle<typeof schema>>;
-let pool: Pool | undefined;
-export let db: Database = undefined as unknown as Database;
-
-export function configureDatabase(connectionString: string): void {
-  if (pool) return;
-  if (!connectionString) throw new Error('HYPERDRIVE connection string is required');
-  pool = new Pool({ connectionString, max: 5, ssl: { rejectUnauthorized: true } });
-  db = drizzle(pool, { schema });
+export type Database = ReturnType<typeof drizzle<typeof schema>>;
+export let db: Database | undefined;
+export function configureDatabase(binding: D1Database): void {
+  if (!binding) throw new Error('D1 database binding DB is required');
+  db = drizzle(binding, { schema });
 }
