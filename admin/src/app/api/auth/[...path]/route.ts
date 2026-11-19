@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// The admin Worker must call Neon Auth directly. Calling the separate
-// gestock-auth-proxy Worker from another Worker in the same Cloudflare account
-// triggers Cloudflare error 1042 (Worker-to-Worker fetch restriction).
 const AUTH_UPSTREAM_BASE = "https://ep-holy-boat-banyu93m.neonauth.c-8.eu-central-1.aws.neon.tech/gestock/auth";
 const APP_ORIGIN = "https://gestock-admin.ccds22431.workers.dev";
 
@@ -20,25 +17,28 @@ async function proxy(req: NextRequest, context: { params: Promise<{ path: string
   headers.set("accept", "application/json");
 
   try {
+    const body = ["GET", "HEAD"].includes(req.method) ? undefined : await req.text();
     const upstream = await fetch(target, {
       method: req.method,
       headers,
-      body: ["GET", "HEAD"].includes(req.method) ? undefined : await req.arrayBuffer(),
+      body,
       redirect: "manual",
       cache: "no-store",
     });
 
+    // Buffer the upstream response instead of forwarding a streaming body;
+    // this avoids empty/failed responses in the Cloudflare Next.js runtime.
+    const responseBody = req.method === "HEAD" ? null : await upstream.text();
     const responseHeaders = new Headers();
-    for (const name of ["content-type", "set-cookie", "location", "www-authenticate"]) {
+    for (const name of ["content-type", "location", "www-authenticate"]) {
       const value = upstream.headers.get(name);
-      if (value) responseHeaders.append(name, value);
+      if (value) responseHeaders.set(name, value);
     }
+    const cookies = upstream.headers.get("set-cookie");
+    if (cookies) responseHeaders.set("set-cookie", cookies);
     responseHeaders.set("Cache-Control", "no-store");
 
-    return new NextResponse(upstream.body, {
-      status: upstream.status,
-      headers: responseHeaders,
-    });
+    return new NextResponse(responseBody, { status: upstream.status, headers: responseHeaders });
   } catch (error) {
     return NextResponse.json({
       error: "AUTH_UPSTREAM_UNAVAILABLE",
