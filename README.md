@@ -26,12 +26,13 @@ Neon domain-data migration is not verified; existing Neon data is preserved. D1 
 - docs/: architecture and implementation status.
 
 ## Run the mobile app
-\`\`\`bash
+\`\`\`
 cd mobile
 flutter pub get
 flutter run
 \`\`\`
 
-Build an APK from CI: the Android workflow publishes a release-mode APK with its SHA-256 checksum to the android-latest GitHub Release. It is not yet a signed Play Store bundle.
+## Android release
+The release-mode APK and SHA-256 file are published on [the android-latest GitHub Release](https://github.com/editadigoun-cmd/GeStock/releases/tag/android-latest). This is not yet a signed Play Store bundle.
 
 See docs/ARCHITECTURE.md and docs/IMPLEMENTATION_STATUS.md for details.

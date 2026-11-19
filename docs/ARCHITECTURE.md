@@ -60,8 +60,7 @@ User/role CRUD, billing, ads, support, audit UI and global settings are not impl
 - Android: GitHub Actions release-mode APK and \`android-latest\` release with SHA-256.
 
 ## Next gates
-1. Complete APK artifact/checksum verification.
-2. Enable Cloudflare Access manually and configure the admin allow policy for editadigoun@gmail.com.
-3. Verify login/offline-to-online sync on a real Android device.
-4. Implement conflict resolution, user roles, payment provider, cash sessions, returns, purchasing, customer credit and receipts.
-5. Signed Play Store/App Store build and data migration verification.
+1. Enable Cloudflare Access manually and configure the admin allow policy for editadigoun@gmail.com.
+2. Verify login/offline-to-online sync on a real Android device.
+3. Implement conflict resolution, user roles, payment provider, cash sessions, returns, purchasing, customer credit and receipts.
+4. Signed Play Store/App Store build and data migration verification.
