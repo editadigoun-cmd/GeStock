@@ -207,8 +207,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 10),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
+                                Wrap(
+                                  alignment: WrapAlignment.center,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  spacing: 2,
                                   children: [
                                     Text(
                                       _isSignUp ? 'Vous avez déjà un compte ?' : 'Vous découvrez GeStock ?',
