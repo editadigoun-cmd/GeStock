@@ -1,0 +1,11 @@
+import 'package:dio/dio.dart';
+import 'auth_repository.dart';
+
+class EmployeeRepository {
+ EmployeeRepository(this.auth,{Dio? dio}):_dio=dio??Dio(BaseOptions(baseUrl:const String.fromEnvironment('GESTOCK_API_URL',defaultValue:'https://gestock-api.ccds22431.workers.dev'),headers:{'Content-Type':'application/json'}));
+ final AuthRepository auth;final Dio _dio;
+ Future<List<Map<String,Object?>>> list(String businessId)async{final token=await auth.getAccessToken();final r=await _dio.get('/v1/employees',queryParameters:{'business_id':businessId},options:Options(headers:{'Authorization':'Bearer $token'}));if(r.statusCode==null||r.statusCode!>=400)throw Exception(_message(r.data));final data=r.data is Map?r.data['data']:null;if(data is! List)throw Exception('Réponse employés invalide');return data.whereType<Map>().map((e)=>Map<String,Object?>.from(e)).toList();}
+ Future<void> add(String businessId,String email,String role)async{final token=await auth.getAccessToken();final r=await _dio.post('/v1/employees',data:{'business_id':businessId,'email':email.trim(),'role':role},options:Options(headers:{'Authorization':'Bearer $token'}));if(r.statusCode==null||r.statusCode!>=400)throw Exception(_message(r.data));}
+ Future<void> update(String businessId,String membershipId,{String? role,String? status})async{final token=await auth.getAccessToken();final r=await _dio.patch('/v1/employees/$membershipId',data:{'business_id':businessId,if(role!=null)'role':role,if(status!=null)'status':status},options:Options(headers:{'Authorization':'Bearer $token'}));if(r.statusCode==null||r.statusCode!>=400)throw Exception(_message(r.data));}
+ String _message(dynamic d){if(d is Map){final m=d['message']??d['error'];if(m=='EMPLOYEE_ACCOUNT_NOT_FOUND')return 'Cet employé doit d’abord créer son compte GeStock avec cet e-mail.';if(m is String)return m;}return 'Impossible de gérer cet employé. Réessayez.';}
+}
