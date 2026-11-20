@@ -29,7 +29,8 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                 final c=rows[i];return Card(child:ListTile(
                   leading:CircleAvatar(backgroundColor:GeStockColors.emerald.withValues(alpha:.12),child:const Icon(Icons.person_outline,color:GeStockColors.deepEmerald)),
                   title:Text(c['name'].toString(),style:const TextStyle(fontWeight:FontWeight.w800)),
-                  subtitle:Text([c['phone'],c['email'],c['address']].where((v)=>v!=null&&v.toString().trim().isNotEmpty).join(' · '),isThreeLine:false,
+                  subtitle:Text([c['phone'],c['email'],c['address']].where((v)=>v!=null&&v.toString().trim().isNotEmpty).join(' · ')),
+                  isThreeLine:false,
                   trailing:Icon(c['sync_state']=='synced'?Icons.cloud_done_outlined:Icons.cloud_upload_outlined,color:c['sync_state']=='synced'?GeStockColors.deepEmerald:GeStockColors.amber),
                   onTap:()=>_edit(businessId,c),
                 ));
