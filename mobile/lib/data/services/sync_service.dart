@@ -72,7 +72,7 @@ class SyncService {
       final pending = await db.rawQuery("""
         SELECT id,business_id,entity_type,entity_id,operation,payload,created_at,attempts
         FROM outbox WHERE status='queued'
-        ORDER BY CASE entity_type WHEN 'business' THEN 0 WHEN 'product' THEN 1 WHEN 'stock_movement' THEN 2 WHEN 'customer' THEN 3 WHEN 'sale' THEN 4 ELSE 5 END,
+        ORDER BY CASE entity_type WHEN 'business' THEN 0 WHEN 'product' THEN 1 WHEN 'stock_movement' THEN 2 WHEN 'customer' THEN 3 WHEN 'supplier' THEN 4 WHEN 'sale' THEN 5 ELSE 6 END,
         created_at ASC,rowid ASC LIMIT 30
       """);
       if (pending.isEmpty) break;
@@ -104,6 +104,8 @@ class SyncService {
               await txn.update('stock_movements', {'sync_state': 'synced'}, where: 'id = ?', whereArgs: [entityId]);
             } else if (type == 'customer') {
               await txn.update('customers', {'sync_state': 'synced'}, where: 'id = ?', whereArgs: [entityId]);
+            } else if (type == 'supplier') {
+              await txn.update('suppliers', {'sync_state': 'synced'}, where: 'id = ?', whereArgs: [entityId]);
             } else if (type == 'sale') {
               await txn.update('sales', {'sync_state': 'synced'}, where: 'id = ?', whereArgs: [entityId]);
               await txn.update('stock_movements', {'sync_state': 'synced'}, where: 'source_type = ? AND source_id = ?', whereArgs: ['sale', entityId]);
@@ -123,6 +125,8 @@ class SyncService {
             await db.update('stock_movements', {'sync_state': status}, where: 'id = ?', whereArgs: [operationRow['entity_id']]);
           } else if (operationType == 'customer') {
             await db.update('customers', {'sync_state': status}, where: 'id = ?', whereArgs: [operationRow['entity_id']]);
+          } else if (operationType == 'supplier') {
+            await db.update('suppliers', {'sync_state': status}, where: 'id = ?', whereArgs: [operationRow['entity_id']]);
           } else if (operationType == 'sale') {
             await db.update('sales', {'sync_state': status}, where: 'id = ?', whereArgs: [operationId]);
             await db.update('stock_movements', {'sync_state': status}, where: 'source_type = ? AND source_id = ?', whereArgs: ['sale', operationId]);
