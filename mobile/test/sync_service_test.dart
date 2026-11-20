@@ -42,6 +42,7 @@ class _SyncAdapter implements HttpClientAdapter {
   _SyncAdapter({this.conflictStockMovement = false});
   final bool conflictStockMovement;
   final seen = <String>[];
+  final levels = <String,double>{};
 
   ResponseBody _response(Object body, [int status = 200]) => ResponseBody.fromString(
     jsonEncode(body), status, headers: {'content-type': ['application/json']},
@@ -53,11 +54,19 @@ class _SyncAdapter implements HttpClientAdapter {
     if (options.path == '/v1/sync/devices/register') {
       return _response({'data': {'id': 'device-test'}});
     }
+    if (options.path == '/v1/stock/levels') {
+      return _response({'data': levels.entries.map((entry) => {'product_id': entry.key, 'quantity': entry.value}).toList()});
+    }
     if (options.path == '/v1/sync/batch') {
       final operations = (options.data as Map)['operations'] as List;
       return _response({'data': operations.map((operation) {
         final op = operation as Map;
         final conflict = conflictStockMovement && op['entity_type'] == 'stock_movement';
+        if (!conflict && op['entity_type'] == 'stock_movement') {
+          final payload = op['payload'] as Map;
+          final productId = payload['product_id'].toString();
+          levels[productId] = (levels[productId] ?? 0) + ((payload['quantity_delta'] as num).toDouble());
+        }
         return {'operation_id': op['id'], 'status': conflict ? 'conflict' : 'applied', if (conflict) 'error': 'STOCK_CONFLICT'};
       }).toList()});
     }
