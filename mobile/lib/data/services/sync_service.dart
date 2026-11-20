@@ -136,6 +136,37 @@ class SyncService {
       if (results.length < operations.length) allApplied = false;
       if (results.isEmpty) break;
     }
-    return allApplied;
+    final stockPulled = await _pullStockLevels(db);
+    return allApplied && stockPulled;
+  }
+
+  Future<bool> _pullStockLevels(Database db) async {
+    final businesses = await db.query('businesses', columns: ['id']);
+    final token = await auth.getAccessToken();
+    var ok = true;
+    for (final business in businesses) {
+      final businessId = business['id'] as String;
+      try {
+        final response = await _dio.get('/v1/stock/levels', queryParameters: {'business_id': businessId}, options: Options(headers: {'Authorization': 'Bearer $token'}));
+        final data = response.data;
+        if (data is! Map || data['data'] is! List) { ok = false; continue; }
+        final totals = <String,double>{};
+        for (final raw in (data['data'] as List).whereType<Map>()) {
+          final productId = raw['product_id']?.toString();
+          final quantity = (raw['quantity'] as num?)?.toDouble();
+          if (productId != null && quantity != null && quantity.isFinite) totals[productId] = (totals[productId] ?? 0) + quantity;
+        }
+        await db.transaction((txn) async {
+          final products = await txn.query('products', where: 'business_id = ?', whereArgs: [businessId]);
+          for (final product in products) {
+            final productId = product['id'] as String;
+            final pending = await txn.rawQuery("SELECT COUNT(*) AS count FROM outbox WHERE business_id=? AND entity_type IN ('stock_movement','sale','purchase') AND status IN ('queued','failed','conflict') AND payload LIKE ?", [businessId, '%"product_id":"$productId"%']);
+            if (((pending.first['count'] as num?)?.toInt() ?? 0) > 0) continue;
+            await txn.update('products', {'quantity': totals[productId] ?? 0}, where: 'id = ? AND business_id = ?', whereArgs: [productId,businessId]);
+          }
+        });
+      } catch (_) { ok = false; }
+    }
+    return ok;
   }
 }
