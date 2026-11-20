@@ -121,12 +121,12 @@ async function applyOperation(authSubject: string, deviceId: string, op: z.infer
     if(!sale)throw new Error('SALE_NOT_FOUND');
     const soldItems=await db.select().from(saleItems).where(eq(saleItems.saleId,saleId));
     const soldMap=new Map(soldItems.map(x=>[x.id,x]));
-    const returnRows=[];const stockWrites:any[]=[];let refundAmount=0;
+    const returnRows=[];const stockWrites:any[]=[];let refundAmount=0;const returnQuantities=new Map<string,number>();
     for(const item of items){
       const saleItemId=String(item.sale_item_id??'');const qty=Number(item.quantity);
       const original=soldMap.get(saleItemId);if(!original||!Number.isFinite(qty)||qty<=0)throw new Error('INVALID_RETURN_ITEM');
       const prior=await db.select({quantity:saleReturnItems.quantity}).from(saleReturnItems).where(eq(saleReturnItems.saleItemId,saleItemId));
-      const returned=prior.reduce((sum,x)=>sum+Number(x.quantity),0);if(returned+qty>Number(original.quantity)+1e-8)throw new Error('RETURN_QUANTITY_EXCEEDS_SOLD');
+      const returned=prior.reduce((sum,x)=>sum+Number(x.quantity),0);if(returned+qty>Number(original.quantity)+1e-8)throw new Error('RETURN_QUANTITY_EXCEEDS_SOLD');returnQuantities.set(saleItemId,returned+qty);
       const unit=Number(original.lineTotal)/Number(original.quantity);const lineRefund=unit*qty;refundAmount+=lineRefund;
       returnRows.push({id:crypto.randomUUID(),returnId,saleItemId,productId:original.productId,productNameSnapshot:original.productNameSnapshot,quantity:qty,unitPrice:Number(original.unitPrice),refundAmount:lineRefund});
       if(original.productId){
@@ -140,7 +140,8 @@ async function applyOperation(authSubject: string, deviceId: string, op: z.infer
     const number=String(p.return_number??('RET-'+returnId.slice(0,8).toUpperCase()));
     const [existing]=await db.select({id:saleReturns.id}).from(saleReturns).where(eq(saleReturns.id,returnId)).limit(1);
     if(existing)return {status:'applied',result:{id:returnId,synced:true,duplicate:true},duplicate:true};
-    await db.batch([db.insert(saleReturns).values({id:returnId,businessId:op.business_id,saleId,returnNumber:number,reason,refundMethod,refundAmount,status:'completed',returnedAt,createdBy:user.id}),...returnRows.map(x=>db.insert(saleReturnItems).values(x)),...stockWrites,db.update(sales).set({status:'returned'}).where(and(eq(sales.id,saleId),eq(sales.businessId,op.business_id))),db.insert(syncOperations).values(operationRecord(deviceId,op,{id:returnId,synced:true}))]);
+    const fullyReturned=soldItems.every(item=>{const prior=returnQuantities.get(item.id);if(prior!==undefined)return prior>=Number(item.quantity)-1e-8;return false;});
+    await db.batch([db.insert(saleReturns).values({id:returnId,businessId:op.business_id,saleId,returnNumber:number,reason,refundMethod,refundAmount,status:'completed',returnedAt,createdBy:user.id}),...returnRows.map(x=>db.insert(saleReturnItems).values(x)),...stockWrites,db.update(sales).set({status:fullyReturned?'returned':'partially_returned'}).where(and(eq(sales.id,saleId),eq(sales.businessId,op.business_id))),db.insert(syncOperations).values(operationRecord(deviceId,op,{id:returnId,synced:true}))]);
     return {status:'applied',result:{id:returnId,synced:true,refund_amount:refundAmount},duplicate:false};
   }
 
