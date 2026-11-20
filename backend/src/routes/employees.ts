@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '../services/db.js';
-import { appUsers, businessMemberships } from '../schema.js';
+import { appUsers, businessMemberships, businesses } from '../schema.js';
 import { hashSessionToken } from '../services/password.js';
 import type { AppEnv } from '../middleware/auth.js';
 
@@ -38,7 +38,7 @@ employeeRoutes.post('/invitations',async c=>{
  const token=crypto.randomUUID()+crypto.randomUUID(),tokenHash=await hashSessionToken(token),id=crypto.randomUUID(),created=now(),expires=new Date(Date.now()+7*86400000).toISOString(),inviter=await actorUserId(c.get('userId'));
  await c.env.DB.prepare("UPDATE business_invitations SET revoked_at=? WHERE business_id=? AND email=? AND accepted_at IS NULL AND revoked_at IS NULL").bind(created,input.business_id,email).run();
  await c.env.DB.prepare("INSERT INTO business_invitations(id,business_id,email,role,token_hash,inviter_user_id,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?)").bind(id,input.business_id,email,input.role,tokenHash,inviter,created,expires).run();
- const [biz]=await db.select({name:(await import('../schema.js')).businesses.name}).from((await import('../schema.js')).businesses).where(eq((await import('../schema.js')).businesses.id,input.business_id)).limit(1);
+ const [biz]=await db.select({name:businesses.name}).from(businesses).where(eq(businesses.id,input.business_id)).limit(1);
  const url=base+'/invite/accept?token='+encodeURIComponent(token);
  const html=`<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:24px"><h2>Invitation à rejoindre ${biz?.name??'une entreprise'} sur GeStock</h2><p>Vous êtes invité(e) à rejoindre cette entreprise comme <strong>${input.role}</strong>.</p><p><a href="${url}" style="display:inline-block;padding:14px 22px;background:#146c43;color:#fff;text-decoration:none;border-radius:8px">Accepter l’invitation</a></p><p>Ce lien expire dans 7 jours. Si vous ne vous attendiez pas à cette invitation, ignorez cet e-mail.</p></div>`;
  const mail=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+apiKey,'Content-Type':'application/json'},body:JSON.stringify({from,to:[email],subject:'Invitation GeStock — '+(biz?.name??'Entreprise'),html})});
