@@ -82,7 +82,8 @@ export async function createSaleTransaction(userId: string, input: SaleInput, sy
     throw new Error('PAYMENT_AMOUNT_MISMATCH');
   }
   const pending = ['mobile_money', 'card', 'bank_transfer'].includes(input.payment_method);
-  const amountPaid = pending ? 0 : Math.min(paymentAmount, totals.total);\n  const outstanding = input.payment_method === 'credit' ? totals.total - amountPaid : 0;
+  const amountPaid = pending ? 0 : Math.min(paymentAmount, totals.total);
+  const outstanding = input.payment_method === 'credit' ? totals.total - amountPaid : 0;
   const now = new Date().toISOString();
   const soldAt = input.sold_at ?? now;
 
@@ -125,7 +126,10 @@ export async function createSaleTransaction(userId: string, input: SaleInput, sy
       set: { quantity: sql`${stockLevels.quantity} - ${quantity}`, updatedAt: now },
     }));
   }
-  if (input.payment_method === 'credit' && input.customer_id && outstanding > 0) {\n    queries.push(db.update(customers).set({ balanceDue: sql`${customers.balanceDue} + ${outstanding}` }).where(and(eq(customers.id, input.customer_id), eq(customers.businessId, input.business_id))));\n  }\n  if (syncRecord) queries.push(db.insert(syncOperations).values({ ...syncRecord, result: { id: input.id, synced: true, duplicate: false } }));
+  if (input.payment_method === 'credit' && input.customer_id && outstanding > 0) {
+    queries.push(db.update(customers).set({ balanceDue: sql`${customers.balanceDue} + ${outstanding}` }).where(and(eq(customers.id, input.customer_id), eq(customers.businessId, input.business_id))));
+  }
+  if (syncRecord) queries.push(db.insert(syncOperations).values({ ...syncRecord, result: { id: input.id, synced: true, duplicate: false } }));
   await db.batch(queries);
   return { id: input.id, duplicate: false, total: totals.total, amount_paid: amountPaid, change_due: Math.max(0, paymentAmount - totals.total), payment_status: pending ? 'pending' : 'confirmed' };
 }
