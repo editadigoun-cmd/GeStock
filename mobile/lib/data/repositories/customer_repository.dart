@@ -29,7 +29,9 @@ class CustomerRepository {
       for(final raw in (data['data'] as List).whereType<Map>()) {
         final row=Map<String,Object?>.from(raw); final customerId=row['id']?.toString(); if(customerId==null) continue;
         final queued=await txn.query('outbox',where:"entity_type='customer' AND entity_id=? AND status IN ('queued','failed','conflict')",whereArgs:[customerId],limit:1);
-        if(queued.isNotEmpty) continue;\n        final pendingSale=await txn.rawQuery(\"SELECT COUNT(*) AS count FROM outbox WHERE entity_type='sale' AND status IN ('queued','failed','conflict') AND payload LIKE ?\",['%\\\"customer_id\\\":\\\"$customerId\\\"%']);\n        if(((pendingSale.first['count'] as num?)?.toInt()??0)>0) continue;
+        if(queued.isNotEmpty) continue;
+        final pendingSale=await txn.rawQuery(\"SELECT COUNT(*) AS count FROM outbox WHERE entity_type='sale' AND status IN ('queued','failed','conflict') AND payload LIKE ?\",['%\\\"customer_id\\\":\\\"$customerId\\\"%']);
+        if(((pendingSale.first['count'] as num?)?.toInt()??0)>0) continue;
         final local=await txn.query('customers',where:'id=?',whereArgs:[customerId],limit:1);
         final values={'id':customerId,'business_id':businessId,'name':row['name']??'','phone':row['phone'],'email':row['email'],'address':row['address'],'notes':row['notes'],'balance_due':row['balance_due']??0,'created_at':row['created_at']??now,'updated_at':row['updated_at']??now,'sync_state':'synced'};
         if(local.isEmpty) await txn.insert('customers',values); else await txn.update('customers',values,where:'id=?',whereArgs:[customerId]);
