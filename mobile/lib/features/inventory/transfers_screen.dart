@@ -26,7 +26,6 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
   String? destinationId;
   String? selectedProductId;
   String? pendingTransferId;
-  String? pendingTransferId;
   final Map<String, double> cart = {};
   List<Map<String, Object?>> warehouses = [];
   List<Map<String, Object?>> levels = [];
