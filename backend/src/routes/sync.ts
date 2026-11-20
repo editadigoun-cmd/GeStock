@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../services/db.js';
+import { hasBusinessPermission } from '../services/access.js';
 import { appUsers, businesses, businessMemberships, organizationMemberships, organizations, products, customers, customerPayments, saleReturns, saleReturnItems, sales, saleItems, cashRegisters, cashSessions, suppliers, purchases, purchaseItems, expenses, stockMovements, stockLevels, syncDevices, syncOperations, warehouses } from '../schema.js';
 import { saleInputSchema, createSaleTransaction } from '../services/sales.js';
 import type { AppEnv } from '../middleware/auth.js';
@@ -79,7 +80,7 @@ async function applyOperation(authSubject: string, deviceId: string, op: z.infer
     const [existing] = await db.select({ id: businesses.id }).from(businesses).where(eq(businesses.id, op.business_id)).limit(1);
     const result = { id: op.business_id, synced: true };
     if (existing) {
-      const [membership] = await db.select({ id: businessMemberships.id }).from(businessMemberships)
+      const requiredPermission = ({ product: 'products.write', customer: 'customers.write', supplier: 'purchases.write', purchase: 'purchases.write', expense: 'expenses.write', customer_payment: 'customers.write', sale_return: 'sales.create', cash_session: 'cash.write', stock_movement: 'stock.write', sale: 'sales.create' } as const)[op.entity_type as Exclude<typeof op.entity_type,'business'>];\n  if (requiredPermission && !await hasBusinessPermission(authSubject, op.business_id, requiredPermission)) throw new Error('FORBIDDEN');\n\n  const [membership] = await db.select({ id: businessMemberships.id }).from(businessMemberships)
         .where(and(eq(businessMemberships.businessId, op.business_id), eq(businessMemberships.userId, user.id), eq(businessMemberships.status, 'active'))).limit(1);
       if (!membership) throw new Error('FORBIDDEN');
       await db.insert(syncOperations).values(operationRecord(deviceId, op, result));
