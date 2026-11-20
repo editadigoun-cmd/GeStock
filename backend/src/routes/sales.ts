@@ -31,7 +31,7 @@ salesRoutes.get('/:id', async (c) => {
   const businessId = c.req.query('business_id');
   const id = c.req.param('id');
   if (!businessId) return c.json({ error: 'BUSINESS_REQUIRED' }, 400);
-  if (!await hasBusinessAccess(c.get('userId'), businessId)) return c.json({ error: 'FORBIDDEN' }, 403);
+  if (!await hasBusinessPermission(c.get('userId'), businessId, 'sales.read')) return c.json({ error: 'FORBIDDEN' }, 403);
   const [sale] = await db.select().from(sales).where(and(eq(sales.id, id), eq(sales.businessId, businessId))).limit(1);
   if (!sale) return c.json({ error: 'SALE_NOT_FOUND' }, 404);
   const items = await db.select().from(saleItems).where(eq(saleItems.saleId, id));

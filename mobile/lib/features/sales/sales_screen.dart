@@ -141,7 +141,15 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
     },
   );
 
-  Future<void> _printReceipt(String businessId, Map<String, Object?> sale) async {\n    try {\n      await ReceiptService.printSaleReceipt(context: context, database: ref.read(databaseProvider), businessId: businessId, sale: sale);\n    } catch (error) {\n      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Impossible de préparer le reçu : $error')));\n    }\n  }\n\n  Future<void> _returnSale(String businessId,Map<String,Object?> sale) async {
+  Future<void> _printReceipt(String businessId, Map<String, Object?> sale) async {
+    try {
+      await ReceiptService.printSaleReceipt(context: context, database: ref.read(databaseProvider), businessId: businessId, sale: sale);
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Impossible de préparer le reçu : $error')));
+    }
+  }
+
+  Future<void> _returnSale(String businessId,Map<String,Object?> sale) async {
     final db=await ref.read(databaseProvider).database;
     final saleItems=await db.query('sale_items',where:'sale_id=?',whereArgs:[sale['id']]);
     final already=await db.query('sale_return_items',where:'sale_item_id IN (SELECT id FROM sale_items WHERE sale_id=?)',whereArgs:[sale['id']]);
