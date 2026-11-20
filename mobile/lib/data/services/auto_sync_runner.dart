@@ -1,8 +1,9 @@
 import 'dart:async';
+import 'package:flutter/widgets.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'sync_service.dart';
 
-class AutoSyncRunner {
+class AutoSyncRunner with WidgetsBindingObserver {
   AutoSyncRunner(this.sync);
   final SyncService sync;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
@@ -10,11 +11,17 @@ class AutoSyncRunner {
   bool _running = false;
 
   void start() {
+    WidgetsBinding.instance.addObserver(this);
     _connectivitySubscription = Connectivity().onConnectivityChanged.listen((results) {
       if (!results.contains(ConnectivityResult.none)) _run();
     });
-    _timer = Timer.periodic(const Duration(seconds: 20), (_) => _run());
+    _timer = Timer.periodic(const Duration(seconds: 8), (_) => _run());
     _run();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _run();
   }
 
   Future<void> _run() async {
@@ -25,6 +32,7 @@ class AutoSyncRunner {
   }
 
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     _connectivitySubscription?.cancel();
   }
