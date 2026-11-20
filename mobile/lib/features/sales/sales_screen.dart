@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/providers.dart';
 import '../../theme/gestock_theme.dart';
 import '../../data/repositories/sale_math.dart';
+import '../../data/services/receipt_service.dart';
 
 class SalesScreen extends ConsumerStatefulWidget {
   const SalesScreen({super.key});
@@ -134,13 +135,13 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
           leading: Icon(sale['sync_state'] == 'synced' ? Icons.cloud_done_rounded : Icons.cloud_upload_outlined, color: sale['sync_state'] == 'synced' ? GeStockColors.deepEmerald : GeStockColors.amber),
           title: Text(sale['sale_number'].toString(), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
           subtitle: Text('${DateTime.tryParse(sale['sold_at'].toString())?.toLocal().toString().substring(0,16) ?? ''} · ${sale['payment_method']} · ${sale['sync_state']}', style: const TextStyle(fontSize: 10)),
-          trailing: Row(mainAxisSize: MainAxisSize.min, children: [Text(_money((sale['total'] as num).toDouble(), sale['currency_code']?.toString() ?? 'XOF'), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11)), IconButton(tooltip: 'Retour / remboursement', icon: const Icon(Icons.assignment_return_outlined), onPressed: saving ? null : () => _returnSale(businessId, sale))]),
+          trailing: Row(mainAxisSize: MainAxisSize.min, children: [Text(_money((sale['total'] as num).toDouble(), sale['currency_code']?.toString() ?? 'XOF'), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11)), IconButton(tooltip: 'Imprimer le reçu', icon: const Icon(Icons.print_outlined), onPressed: saving ? null : () => _printReceipt(businessId, sale)), IconButton(tooltip: 'Retour / remboursement', icon: const Icon(Icons.assignment_return_outlined), onPressed: saving ? null : () => _returnSale(businessId, sale))]),
         ))),
       ]);
     },
   );
 
-  Future<void> _returnSale(String businessId,Map<String,Object?> sale) async {
+  Future<void> _printReceipt(String businessId, Map<String, Object?> sale) async {\n    try {\n      await ReceiptService.printSaleReceipt(context: context, database: ref.read(databaseProvider), businessId: businessId, sale: sale);\n    } catch (error) {\n      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Impossible de préparer le reçu : $error')));\n    }\n  }\n\n  Future<void> _returnSale(String businessId,Map<String,Object?> sale) async {
     final db=await ref.read(databaseProvider).database;
     final saleItems=await db.query('sale_items',where:'sale_id=?',whereArgs:[sale['id']]);
     final already=await db.query('sale_return_items',where:'sale_item_id IN (SELECT id FROM sale_items WHERE sale_id=?)',whereArgs:[sale['id']]);
