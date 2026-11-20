@@ -41,6 +41,7 @@ class SaleReturnRepository {
           }
         }
       }
+      final customerId=sale['customer_id']?.toString();final outstanding=(((sale['total'] as num?)?.toDouble()??0)-((sale['amount_paid'] as num?)?.toDouble()??0)).clamp(0.0,double.infinity);final debtReduction=totalRefund<outstanding?totalRefund:outstanding;if(customerId!=null&&debtReduction>0)await txn.rawUpdate('UPDATE customers SET balance_due=MAX(balance_due-?,0),updated_at=?,sync_state=? WHERE id=? AND business_id=?',[debtReduction,now,'pending',customerId,businessId]);
       await txn.insert('sale_returns',{'id':returnId,'business_id':businessId,'sale_id':saleId,'return_number':number,'reason':reason.trim(),'refund_method':refundMethod,'refund_amount':totalRefund,'status':'completed','returned_at':now,'created_at':now,'sync_state':'pending'});
       final payload={'id':returnId,'business_id':businessId,'sale_id':saleId,'return_number':number,'reason':reason.trim(),'refund_method':refundMethod,'refund_amount':totalRefund,'returned_at':now,'items':payloadItems};
       await txn.insert('outbox',{'id':returnId,'business_id':businessId,'entity_type':'sale_return','entity_id':returnId,'operation':'create','payload':jsonEncode(payload),'created_at':now,'attempts':0,'status':'queued'});
