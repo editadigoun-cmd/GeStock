@@ -11,6 +11,7 @@ import '../data/repositories/expense_repository.dart';
 import '../data/repositories/customer_payment_repository.dart';
 import '../data/repositories/sale_return_repository.dart';
 import '../data/repositories/cash_repository.dart';
+import '../data/repositories/employee_repository.dart';
 import '../data/services/sync_service.dart';
 
 final databaseProvider = Provider<GeStockDatabase>((ref) {
@@ -29,6 +30,7 @@ final expenseRepositoryProvider = Provider((ref) => ExpenseRepository(ref.watch(
 final customerPaymentRepositoryProvider = Provider((ref) => CustomerPaymentRepository(ref.watch(databaseProvider), ref.watch(authRepositoryProvider)));
 final saleReturnRepositoryProvider = Provider((ref) => SaleReturnRepository(ref.watch(databaseProvider)));
 final cashRepositoryProvider = Provider((ref) => CashRepository(ref.watch(databaseProvider), ref.watch(authRepositoryProvider)));
+final employeeRepositoryProvider = Provider((ref) => EmployeeRepository(ref.watch(authRepositoryProvider)));
 final syncServiceProvider = Provider((ref) => SyncService(
   database: ref.watch(databaseProvider),
   auth: ref.watch(authRepositoryProvider),
