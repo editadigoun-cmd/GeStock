@@ -2,7 +2,7 @@
 
 Audit effectué sur `main` le 20 novembre 2026 à partir de README, docs/IMPLEMENTATION_STATUS.md, docs/ARCHITECTURE.md, backend/src/schema.ts et mobile/lib/data/services/sync_service.dart.
 
-> Cet inventaire est évolutif. « Présent en base/backend » ne signifie pas que l'écran mobile existe ni que le parcours est fonctionnel. Les tests sur appareil restent nécessaires. Progression du 20 novembre 2026 : modules Clients et Fournisseurs en cours sur main (migrations locales, écrans CRUD hors ligne, API cloud de lecture et sync push). Clients : sélection facultative au POS. CI et tests appareil à confirmer. Aucun nouvel APK de distribution ne doit être publié avant la fin de l'audit et des tests. Aucun nouvel APK de distribution ne doit être publié avant la fin de l'audit et des tests.
+> Cet inventaire est évolutif. « Présent en base/backend » ne signifie pas que l'écran mobile existe ni que le parcours est fonctionnel. Les tests sur appareil restent nécessaires. Progression du 20 novembre 2026 : modules Clients et Fournisseurs développés sur main (migrations locales, écrans CRUD hors ligne, API cloud de lecture et sync push). Clients : sélection facultative au POS. Module Achats/Réceptions en cours : réception multi-produits hors ligne, mise à jour du stock, route cloud et sync transactionnelle. CI et tests appareil à confirmer. Aucun nouvel APK de distribution ne doit être publié avant la fin de l'audit et des tests. Aucun nouvel APK de distribution ne doit être publié avant la fin de l'audit et des tests.
 
 ## Statuts
 
@@ -25,9 +25,9 @@ Audit effectué sur `main` le 20 novembre 2026 à partir de README, docs/IMPLEME
 | Inventaire | À vérifier / incomplet | Comptage, écarts, validation |
 | Entrepôts / magasins | Structure backend | Écrans et workflow |
 | Transferts entre magasins | Incomplet | Implémenter |
-| Clients | En cours d'implémentation | CRUD mobile hors ligne, API de lecture cloud, sync push, sélection facultative en POS; CI et tests appareil à confirmer |
-| Fournisseurs | En cours d'implémentation | CRUD mobile hors ligne, API de lecture cloud et sync push; CI et tests appareil à confirmer |
-| Achats | Incomplet | Commande, réception, mise à jour du stock |
+| Clients | Développé, CI à confirmer | CRUD mobile hors ligne, API de lecture cloud, sync push, sélection facultative en POS; tests appareil à confirmer |
+| Fournisseurs | Développé, CI à confirmer | CRUD mobile hors ligne, API de lecture cloud et sync push; tests appareil à confirmer |
+| Achats | En cours d'implémentation | Réception multi-produits hors ligne, mise à jour locale du stock, API cloud et sync transactionnelle; CI et tests appareil à confirmer |
 | Ventes / POS | Présent, workflow incomplet | Parcours complet, panier, paiement, validation |
 | Paiements multiples | Schema ventes/paiements | UI et tests à vérifier |
 | Retours / remboursements | Manquant | Implémenter |
