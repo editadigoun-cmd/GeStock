@@ -164,7 +164,7 @@ async function applyOperation(authSubject: string, deviceId: string, op: z.infer
     total = Math.round(total * 100) / 100;
     const now = new Date().toISOString();
     const result = {id:purchaseId,synced:true};
-    const queries:any[] = [
+    const queries: [any, ...any[]] = [
       db.insert(purchases).values({id:purchaseId,businessId:op.business_id,supplierId,warehouseId,purchaseNumber,status:'received',currencyCode,total,orderedAt:p.ordered_at?String(p.ordered_at):now,receivedAt:p.received_at?String(p.received_at):now,createdAt:p.created_at?String(p.created_at):now}),
     ...parsedItems.map(i=>db.insert(purchaseItems).values({id:i.id,purchaseId,productId:i.productId,productNameSnapshot:i.productName,quantity:i.quantity,unitCost:i.unitCost,lineTotal:i.lineTotal})),
     ...parsedItems.map(i=>db.insert(stockMovements).values({id:crypto.randomUUID(),businessId:op.business_id,warehouseId,productId:i.productId,movementType:'purchase',quantityDelta:i.quantity,unitCost:i.unitCost,sourceType:'purchase',sourceId:purchaseId,note:'Réception '+purchaseNumber,actorUserId:user.id,occurredAt:now,createdAt:now})),
