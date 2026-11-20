@@ -25,9 +25,10 @@ class SalesRepository {
     required Map<String, double> quantities,
     required String paymentMethod,
     String? customerId,
+    double? paymentAmount,
   }) async {
     if (quantities.isEmpty) throw StateError('Le panier est vide.');
-    if (!['cash', 'mobile_money', 'card', 'bank_transfer', 'other'].contains(paymentMethod)) {
+    if (!['cash', 'mobile_money', 'card', 'bank_transfer', 'other', 'credit'].contains(paymentMethod)) {
       throw ArgumentError('Mode de paiement invalide.');
     }
     final d = await db.database;
@@ -57,7 +58,11 @@ class SalesRepository {
     final now = DateTime.now().toUtc().toIso8601String();
     final number = 'GS-${now.replaceAll(RegExp(r'[-:T.]'), '').substring(0, 14)}-${saleId.substring(0, 4).toUpperCase()}';
     final pendingPayment = ['mobile_money', 'card', 'bank_transfer'].contains(paymentMethod);
-    final amountPaid = pendingPayment ? 0.0 : totals.total;
+    final paidAmount = paymentAmount ?? totals.total;
+    if (!paidAmount.isFinite || paidAmount < 0 || paidAmount > totals.total) throw ArgumentError('Montant payé invalide.');
+    if (paymentMethod == 'credit' && customerId == null) throw StateError('Un client doit être sélectionné pour une vente à crédit.');
+    if (paymentMethod != 'credit' && paymentMethod != 'cash' && paymentMethod != 'other' && paidAmount != totals.total) throw ArgumentError('Le paiement doit couvrir la totalité de la vente.');
+    final amountPaid = pendingPayment ? 0.0 : paidAmount;
     final payloadItems = productRows.map((product) => {
       'product_id': product['id'],
       'product_name_snapshot': product['name'],
@@ -74,7 +79,7 @@ class SalesRepository {
       'currency_code': currencyCode,
       'sold_at': now,
       'payment_method': paymentMethod,
-      'payment_amount': totals.total,
+      'payment_amount': paymentMethod == 'credit' ? paidAmount : totals.total,
       'customer_id': customerId,
       'items': payloadItems,
     };
@@ -84,7 +89,7 @@ class SalesRepository {
         'id': saleId, 'business_id': businessId, 'sale_number': number,
         'currency_code': currencyCode, 'subtotal': totals.subtotal, 'discount_total': totals.discountTotal,
         'tax_total': totals.taxTotal, 'total': totals.total, 'amount_paid': amountPaid,
-        'payment_method': paymentMethod, 'payment_status': pendingPayment ? 'pending' : 'confirmed',
+        'payment_method': paymentMethod, 'payment_status': pendingPayment ? 'pending' : paymentMethod == 'credit' ? (paidAmount >= totals.total ? 'confirmed' : 'partial'),
         'status': 'completed', 'sold_at': now, 'sync_state': 'pending',
         'warehouse_id': warehouseId, 'customer_id': customerId, 'created_at': now,
       });
@@ -111,10 +116,10 @@ class SalesRepository {
       }
       await txn.insert('sale_payments', {
         'id': _uuid.v4(), 'sale_id': saleId, 'payment_method': paymentMethod,
-        'amount': totals.total, 'status': pendingPayment ? 'pending' : 'confirmed',
-        'paid_at': pendingPayment ? null : now, 'created_at': now,
+        'amount': paymentMethod == 'credit' ? paidAmount : totals.total, 'status': pendingPayment ? 'pending' : paymentMethod == 'credit' ? (paidAmount >= totals.total ? 'confirmed' : 'partial') : 'confirmed',
+        'paid_at': pendingPayment || (paymentMethod == 'credit' && paidAmount <= 0) ? null : now, 'created_at': now,
       });
-      await txn.insert('outbox', {
+      if (paymentMethod == 'credit' && customerId != null) {\n        await txn.rawUpdate('UPDATE customers SET balance_due = balance_due + ?, updated_at = ?, sync_state = ? WHERE id = ? AND business_id = ?', [totals.total - paidAmount, now, 'pending', customerId, businessId]);\n      }\n      await txn.insert('outbox', {
         'id': saleId, 'business_id': businessId, 'entity_type': 'sale', 'entity_id': saleId,
         'operation': 'create', 'payload': jsonEncode(payload), 'created_at': now, 'attempts': 0, 'status': 'queued',
       });
