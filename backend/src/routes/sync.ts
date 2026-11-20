@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../services/db.js';
-import { appUsers, businesses, businessMemberships, organizationMemberships, organizations, products, customers, suppliers, purchases, purchaseItems, expenses, stockMovements, stockLevels, syncDevices, syncOperations, warehouses } from '../schema.js';
+import { appUsers, businesses, businessMemberships, organizationMemberships, organizations, products, customers, customerPayments, suppliers, purchases, purchaseItems, expenses, stockMovements, stockLevels, syncDevices, syncOperations, warehouses } from '../schema.js';
 import { saleInputSchema, createSaleTransaction } from '../services/sales.js';
 import type { AppEnv } from '../middleware/auth.js';
 
@@ -39,7 +39,7 @@ syncRoutes.post('/devices/register', async (c) => {
 const operationSchema = z.object({
   id: z.string().uuid(),
   business_id: z.string().uuid(),
-  entity_type: z.enum(['business', 'product', 'customer', 'supplier', 'purchase', 'expense', 'stock_movement', 'sale']),
+  entity_type: z.enum(['business', 'product', 'customer', 'supplier', 'purchase', 'expense', 'customer_payment', 'stock_movement', 'sale']),
   entity_id: z.string().uuid(),
   operation: z.string().min(1).max(40),
   payload: z.record(z.string(), z.unknown()),
@@ -119,6 +119,23 @@ async function applyOperation(authSubject: string, deviceId: string, op: z.infer
     const result = { id: op.entity_id, synced: true };
     const outcome = await createSaleTransaction(user.id, parsedSale.data, operationRecord(deviceId, op, result));
     return { status: 'applied', result: { ...result, duplicate: outcome.duplicate }, duplicate: outcome.duplicate };
+  }
+
+  if (op.entity_type === 'customer_payment') {
+    const p=op.payload; const paymentId=String(p.id??op.entity_id); const customerId=String(p.customer_id??'');
+    const amount=Number(p.amount); const method=String(p.payment_method??'cash');
+    const note=p.note?String(p.note):null; const paidAt=p.paid_at?String(p.paid_at):new Date().toISOString();
+    if(paymentId!==op.entity_id||String(p.business_id??op.business_id)!==op.business_id||!z.string().uuid().safeParse(customerId).success||!Number.isFinite(amount)||amount<=0||!['cash','mobile_money','card','bank_transfer','other'].includes(method))throw new Error('INVALID_CUSTOMER_PAYMENT');
+    const [customer]=await db.select().from(customers).where(and(eq(customers.id,customerId),eq(customers.businessId,op.business_id))).limit(1);
+    if(!customer)throw new Error('CUSTOMER_NOT_FOUND');
+    if(Number(customer.balanceDue)<amount)throw new Error('PAYMENT_EXCEEDS_DEBT');
+    const result={id:paymentId,customer_id:customerId,synced:true};
+    await db.batch([
+      db.insert(customerPayments).values({id:paymentId,businessId:op.business_id,customerId,amount,paymentMethod:method,note,paidAt,createdBy:user.id}),
+      db.update(customers).set({balanceDue:sql`${customers.balanceDue} - ${amount}`}).where(and(eq(customers.id,customerId),eq(customers.businessId,op.business_id))),
+      db.insert(syncOperations).values(operationRecord(deviceId,op,result)),
+    ]);
+    return {status:'applied',result,duplicate:false};
   }
 
   if (op.entity_type === 'expense') {
