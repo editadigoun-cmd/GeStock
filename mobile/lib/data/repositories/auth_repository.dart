@@ -95,11 +95,28 @@ class AuthRepository {
 
   Future<bool> hasValidSession() async {
     try {
-      await getAccessToken();
+      final token=await _storage.read(key:_tokenKey);
+      if(token==null||token.isEmpty)return false;
+      final response=await _dio.get('/auth/me',options:Options(headers:{'Authorization':'Bearer $token'}));
+      if(response.statusCode==null||response.statusCode!>=400){await _storage.delete(key:_tokenKey);return false;}
+      final data=response.data;
+      if(data is Map&&data['data'] is Map){
+        final user=data['data']['user'];
+        final required=data['data']['verification_required']==true;
+        final verified=user is Map&&user['email_verified']==true;
+        if(required&&!verified)return false;
+      }
       return true;
-    } catch (_) {
+    }catch(_){return false;}
+  }
+  Future<bool> isVerificationPending() async {
+    try{
+      final token=await _storage.read(key:_tokenKey);if(token==null||token.isEmpty)return false;
+      final response=await _dio.get('/auth/me',options:Options(headers:{'Authorization':'Bearer $token'}));
+      if(response.statusCode==null||response.statusCode!>=400)return false;
+      final data=response.data;if(data is Map&&data['data'] is Map){final user=data['data']['user'];return data['data']['verification_required']==true&&user is Map&&user['email_verified']!=true;}
       return false;
-    }
+    }catch(_){return false;}
   }
 
   Future<void> signOut() async {

@@ -33,7 +33,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   }
 
   Future<void> _restoreSession() async {
-    final valid = await ref.read(authRepositoryProvider).hasValidSession();
+    final auth=ref.read(authRepositoryProvider);
+    final pending=await auth.isVerificationPending();
+    if(!mounted)return;
+    if(pending){setState(()=>_verificationPending=true);return;}
+    final valid = await auth.hasValidSession();
     if (!mounted || !valid) return;
     final businesses = await ref.read(businessRepositoryProvider).list();
     if (!mounted) return;
