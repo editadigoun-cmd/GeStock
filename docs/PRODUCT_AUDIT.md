@@ -30,7 +30,7 @@ Audit effectué sur `main` le 20 novembre 2026 à partir de README, docs/IMPLEME
 | Achats | Développé, CI passée | Réception multi-produits hors ligne, mise à jour locale du stock, API cloud et sync transactionnelle; tests appareil à confirmer |
 | Ventes / POS | Présent, workflow incomplet | Parcours complet, panier, paiement, validation |
 | Paiements multiples | Schema ventes/paiements | UI et tests à vérifier |
-| Retours / remboursements | Manquant | Implémenter |
+| Retours / remboursements | Développé, CI réussie | Retour partiel/total par vente, validation quantités, motif, méthode de remboursement, réintégration stock, ajustement dette client et sync offline; tests appareil à confirmer |
 | Crédit / dette client | Développé, CI passée, migration/API déployées | Vente à crédit avec acompte ou paiement différé, client obligatoire, solde dû local/cloud, encaissements ultérieurs hors ligne et historique API; tests appareil et parcours métier à confirmer |
 | Sessions de caisse | Incomplet | Ouverture, clôture, rapprochement |
 | Dépenses | Développé, CI passée, API déployée | Enregistrement hors ligne, catégories et synchronisation; tests appareil à confirmer |
