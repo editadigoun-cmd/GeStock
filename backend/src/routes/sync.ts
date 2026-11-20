@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../services/db.js';
-import { appUsers, businesses, businessMemberships, organizationMemberships, organizations, products, stockMovements, stockLevels, syncDevices, syncOperations, warehouses } from '../schema.js';
+import { appUsers, businesses, businessMemberships, organizationMemberships, organizations, products, customers, stockMovements, stockLevels, syncDevices, syncOperations, warehouses } from '../schema.js';
 import { saleInputSchema, createSaleTransaction } from '../services/sales.js';
 import type { AppEnv } from '../middleware/auth.js';
 
@@ -39,7 +39,7 @@ syncRoutes.post('/devices/register', async (c) => {
 const operationSchema = z.object({
   id: z.string().uuid(),
   business_id: z.string().uuid(),
-  entity_type: z.enum(['business', 'product', 'stock_movement', 'sale']),
+  entity_type: z.enum(['business', 'product', 'customer', 'stock_movement', 'sale']),
   entity_id: z.string().uuid(),
   operation: z.string().min(1).max(40),
   payload: z.record(z.string(), z.unknown()),
@@ -119,6 +119,21 @@ async function applyOperation(authSubject: string, deviceId: string, op: z.infer
     const result = { id: op.entity_id, synced: true };
     const outcome = await createSaleTransaction(user.id, parsedSale.data, operationRecord(deviceId, op, result));
     return { status: 'applied', result: { ...result, duplicate: outcome.duplicate }, duplicate: outcome.duplicate };
+  }
+
+  if (op.entity_type === 'customer') {
+    const p = op.payload;
+    const customerId = String(p.id ?? op.entity_id);
+    if (customerId !== op.entity_id || String(p.business_id ?? op.business_id) !== op.business_id || !String(p.name ?? '').trim()) throw new Error('INVALID_CUSTOMER_PAYLOAD');
+    const values = { name: String(p.name).trim(), phone: p.phone ? String(p.phone).trim() : null, email: p.email ? String(p.email).trim() : null, address: p.address ? String(p.address).trim() : null, notes: p.notes ? String(p.notes).trim() : null, updatedAt: p.updated_at ? String(p.updated_at) : new Date().toISOString() };
+    const [current] = await db.select({ id: customers.id, businessId: customers.businessId }).from(customers).where(eq(customers.id, customerId)).limit(1);
+    if (current && current.businessId !== op.business_id) throw new Error('CUSTOMER_BUSINESS_MISMATCH');
+    const result = { id: customerId, synced: true };
+    const write = current
+      ? db.update(customers).set(values).where(eq(customers.id, customerId))
+      : db.insert(customers).values({ id: customerId, businessId: op.business_id, ...values, balanceDue: Number(p.balance_due ?? 0), createdAt: p.created_at ? String(p.created_at) : new Date().toISOString() });
+    await db.batch([write, db.insert(syncOperations).values(operationRecord(deviceId, op, result))]);
+    return { status: 'applied', result, duplicate: false };
   }
 
   if (op.entity_type === 'product') {
