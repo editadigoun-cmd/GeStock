@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../services/db.js';
-import { appUsers, businesses, businessMemberships, organizationMemberships, organizations, products, customers, customerPayments, saleReturns, saleReturnItems, sales, saleItems, suppliers, purchases, purchaseItems, expenses, stockMovements, stockLevels, syncDevices, syncOperations, warehouses } from '../schema.js';
+import { appUsers, businesses, businessMemberships, organizationMemberships, organizations, products, customers, customerPayments, saleReturns, saleReturnItems, sales, saleItems, cashRegisters, cashSessions, suppliers, purchases, purchaseItems, expenses, stockMovements, stockLevels, syncDevices, syncOperations, warehouses } from '../schema.js';
 import { saleInputSchema, createSaleTransaction } from '../services/sales.js';
 import type { AppEnv } from '../middleware/auth.js';
 
@@ -39,7 +39,7 @@ syncRoutes.post('/devices/register', async (c) => {
 const operationSchema = z.object({
   id: z.string().uuid(),
   business_id: z.string().uuid(),
-  entity_type: z.enum(['business', 'product', 'customer', 'supplier', 'purchase', 'expense', 'customer_payment', 'sale_return', 'stock_movement', 'sale']),
+  entity_type: z.enum(['business', 'product', 'customer', 'supplier', 'purchase', 'expense', 'customer_payment', 'sale_return', 'cash_session', 'stock_movement', 'sale']),
   entity_id: z.string().uuid(),
   operation: z.string().min(1).max(40),
   payload: z.record(z.string(), z.unknown()),
@@ -111,6 +111,25 @@ async function applyOperation(authSubject: string, deviceId: string, op: z.infer
   const [membership] = await db.select({ id: businessMemberships.id }).from(businessMemberships)
     .where(and(eq(businessMemberships.businessId, op.business_id), eq(businessMemberships.userId, user.id), eq(businessMemberships.status, 'active'))).limit(1);
   if (!membership) throw new Error('FORBIDDEN');
+
+  if (op.entity_type === 'cash_session') {
+    const p=op.payload;const sessionId=String(p.id??op.entity_id);const registerId=String(p.register_id??'');const openedAt=String(p.opened_at??new Date().toISOString());const closedAt=p.closed_at?String(p.closed_at):null;
+    const opening=Number(p.opening_amount??0);const closing=p.closing_amount==null?null:Number(p.closing_amount);const expected=p.expected_amount==null?null:Number(p.expected_amount);const status=String(p.status??op.operation);
+    if(sessionId!==op.entity_id||String(p.business_id??op.business_id)!==op.business_id||!z.string().uuid().safeParse(registerId).success||!Number.isFinite(opening)||opening<0||(closing!==null&&(!Number.isFinite(closing)||closing<0))||(expected!==null&&!Number.isFinite(expected))||!['open','closed'].includes(status))throw new Error('INVALID_CASH_SESSION');
+    const [register]=await db.select().from(cashRegisters).where(and(eq(cashRegisters.id,registerId),eq(cashRegisters.businessId,op.business_id))).limit(1);
+    if(!register)await db.insert(cashRegisters).values({id:registerId,businessId:op.business_id,name:String(p.name??'Caisse principale'),isActive:1});
+    const [existing]=await db.select().from(cashSessions).where(eq(cashSessions.id,sessionId)).limit(1);
+    if(op.operation==='open'){
+      if(existing){if(existing.businessId!==op.business_id)throw new Error('CASH_SESSION_CONFLICT');return {status:'applied',result:{id:sessionId,synced:true,duplicate:true},duplicate:true};}
+      await db.insert(cashSessions).values({id:sessionId,businessId:op.business_id,registerId,openedBy:user.id,openingAmount:opening,openedAt,status:'open'});
+    }else if(op.operation==='close'){
+      if(!existing||existing.businessId!==op.business_id)throw new Error('CASH_SESSION_NOT_FOUND');
+      await db.update(cashSessions).set({closedBy:user.id,closingAmount:closing,expectedAmount:expected,closedAt,status:'closed'}).where(and(eq(cashSessions.id,sessionId),eq(cashSessions.businessId,op.business_id)));
+    }else throw new Error('INVALID_CASH_SESSION_OPERATION');
+    const result={id:sessionId,synced:true};
+    await db.insert(syncOperations).values(operationRecord(deviceId,op,result));
+    return {status:'applied',result,duplicate:false};
+  }
 
   if (op.entity_type === 'sale_return') {
     const p=op.payload; const returnId=String(p.id??op.entity_id); const saleId=String(p.sale_id??'');
