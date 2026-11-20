@@ -23,18 +23,18 @@ class _InventoryCountScreenState extends ConsumerState<InventoryCountScreen>{
  }
  Future<void> _save()async{
   final business=_business;if(business==null)return;
-  final changes=<({Map<String,Object?> product,double counted,double current,double delta})>[];
+  final changes=<Map<String,Object?>>[];
   for(final p in _products){
    final id=p['id'] as String;final controller=_controllers[id];if(controller==null)continue;
    final counted=double.tryParse(controller.text.replaceAll(',','.'));
    final current=(p['quantity'] as num?)?.toDouble()??0;
    if(counted==null||!counted.isFinite||counted<0){ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Quantité invalide pour '+p['name'].toString())));return;}
-   final delta=counted-current;if(delta.abs()>0.000001)changes.add((product:p,counted:counted,current:current,delta:delta));
+   final delta=counted-current;if(delta.abs()>0.000001)changes.add({'product':p,'counted':counted,'current':current,'delta':delta});
   }
   if(changes.isEmpty){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Aucun écart à corriger.')));return;}
   setState(()=>_saving=true);
   try{
-   for(final c in changes){await ref.read(productRepositoryProvider).adjustStock(businessId:business['id'] as String,productId:c.product['id'] as String,delta:c.delta,note:'Inventaire physique · stock théorique '+c.current.toString()+' · compté '+c.counted.toString());}
+   for(final c in changes){final product=c['product'] as Map<String,Object?>;final current=c['current'] as double;final counted=c['counted'] as double;final delta=c['delta'] as double;await ref.read(productRepositoryProvider).adjustStock(businessId:business['id'] as String,productId:product['id'] as String,delta:delta,note:'Inventaire physique · stock théorique '+current.toString()+' · compté '+counted.toString());}
    try{await ref.read(syncServiceProvider).syncPending();}catch(_){}
    if(mounted){ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(changes.length.toString()+' écart(s) enregistré(s) localement.')));context.pop();}
   }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Inventaire partiellement enregistré: '+e.toString())));}
