@@ -22,7 +22,7 @@ class AuthRepository {
   static const _tokenKey = 'gestock_auth_token';
   static const _legacyCookieKey = 'gestock_auth_cookie';
 
-  Future<void> signIn(String email, String password) async {
+  Future<bool> signIn(String email, String password) async {
     await _removeLegacyCredential();
     final response = await _dio.post(
       '/auth/login',
@@ -33,6 +33,7 @@ class AuthRepository {
     }
     await _saveToken(response.data);
     await _requireSession();
+    return response.data is Map && response.data['data'] is Map && response.data['data']['verification_required'] == true;
   }
 
   Future<bool> signUp(String name, String email, String password) async {
@@ -124,7 +125,8 @@ class AuthRepository {
     final response=await _dio.post('/auth/resend-verification',options:Options(headers:{'Authorization':'Bearer $token'}));
     if(response.statusCode==null||response.statusCode!>=400)throw Exception(_message(response.data));
   }
-\n  Future<void> changePassword(String currentPassword, String newPassword) async {
+
+  Future<void> changePassword(String currentPassword, String newPassword) async {
     final token = await getAccessToken();
     final response = await _dio.post(
       '/auth/change-password',

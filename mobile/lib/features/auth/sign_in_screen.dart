@@ -23,7 +23,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   bool _isSignUp = false;
   bool _obscurePassword = true;
   bool _obscureConfirmation = true;
-  bool _busy = false;\n  bool _verificationPending = false;
+  bool _busy = false;
+  bool _verificationPending = false;
 
   @override
   void initState() {
@@ -209,6 +210,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 10),
+                                if (!_isSignUp) TextButton(onPressed:_busy?null:_forgotPassword,child:const Text('Mot de passe oublié ?')),
+                                if (_verificationPending) TextButton(onPressed:_busy?null:_resendVerification,child:const Text('Renvoyer l’e-mail de vérification')),
                                 Wrap(
                                   alignment: WrapAlignment.center,
                                   crossAxisAlignment: WrapCrossAlignment.center,
@@ -266,12 +269,18 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     try {
       final auth = ref.read(authRepositoryProvider);
       if (_isSignUp) {
-        await auth.signUp(_name.text.trim(), _email.text.trim(), _password.text);
-        if (mounted) context.go('/business/setup');
+        final verificationRequired=await auth.signUp(_name.text.trim(), _email.text.trim(), _password.text);
+        if (mounted) {
+          if(verificationRequired){setState(()=>_verificationPending=true);_isSignUp=false;_showError('Compte créé. Consultez votre e-mail et vérifiez votre adresse avant de continuer.');}
+          else{context.go('/business/setup');}
+        }
       } else {
-        await auth.signIn(_email.text.trim(), _password.text);
-        final businesses = await ref.read(businessRepositoryProvider).list();
-        if (mounted) context.go(businesses.isEmpty ? '/business/setup' : '/home');
+        final verificationRequired=await auth.signIn(_email.text.trim(), _password.text);
+        if(verificationRequired){if(mounted){setState(()=>_verificationPending=true);_showError('Vérifiez votre adresse e-mail avant de continuer.');}}
+        else{
+          final businesses = await ref.read(businessRepositoryProvider).list();
+          if (mounted) context.go(businesses.isEmpty ? '/business/setup' : '/home');
+        }
       }
     } catch (error) {
       _showError(_friendlyError(error));
