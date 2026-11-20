@@ -31,7 +31,7 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                   title:Text(c['name'].toString(),style:const TextStyle(fontWeight:FontWeight.w800)),
                   subtitle:Text([c['phone'],c['email'],c['address'],((c['balance_due'] as num?)?.toDouble()??0)>0?'Dette : ${(c['balance_due'] as num).toStringAsFixed(0)} ${business['currency_code']}':null].where((v)=>v!=null&&v.toString().trim().isNotEmpty).join(' · ')),
                   isThreeLine:false,
-                  trailing:Icon(c['sync_state']=='synced'?Icons.cloud_done_outlined:Icons.cloud_upload_outlined,color:c['sync_state']=='synced'?GeStockColors.deepEmerald:GeStockColors.amber),
+                  trailing:Row(mainAxisSize:MainAxisSize.min,children:[Icon(c['sync_state']=='synced'?Icons.cloud_done_outlined:Icons.cloud_upload_outlined,color:c['sync_state']=='synced'?GeStockColors.deepEmerald:GeStockColors.amber),if(((c['balance_due'] as num?)?.toDouble()??0)>0)IconButton(tooltip:'Encaisser une dette',icon:const Icon(Icons.payments_outlined,color:GeStockColors.deepEmerald),onPressed:()=>_collect(businessId,c)]) ,
                   onTap:()=>_edit(businessId,c),
                 ));
               });
@@ -40,6 +40,35 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
       }),
     floatingActionButton:FloatingActionButton.extended(onPressed:busy?null:()=>_edit(null,null),icon:const Icon(Icons.person_add_alt_1),label:const Text('Nouveau client')),
   );
+
+  Future<void> _collect(String businessId,Map<String,Object?> customer) async {
+    final balance=(customer['balance_due'] as num?)?.toDouble()??0;
+    if(balance<=0)return;
+    final amount=TextEditingController(text:balance.toStringAsFixed(0));
+    String method='cash';final note=TextEditingController();
+    final result=await showDialog<Map<String,Object?>>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,setDialog)=>AlertDialog(
+      title:Text('Encaissement · ${customer['name']}'),
+      content:Column(mainAxisSize:MainAxisSize.min,children:[
+        Text('Dette restante : ${balance.toStringAsFixed(0)}'),
+        TextField(controller:amount,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'Montant reçu')),
+        DropdownButtonFormField<String>(value:method,decoration:const InputDecoration(labelText:'Mode de paiement'),items:const ['cash','mobile_money','card','bank_transfer','other'].map((m)=>DropdownMenuItem(value:m,child:Text({'cash':'Espèces','mobile_money':'Mobile Money','card':'Carte','bank_transfer':'Virement','other':'Autre'}[m]!))).toList(),onChanged:(v)=>setDialog(()=>method=v??'cash')),
+        TextField(controller:note,decoration:const InputDecoration(labelText:'Note (facultatif)')),
+      ]),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('Annuler')),FilledButton(onPressed:()=>Navigator.pop(ctx,{'amount':double.tryParse(amount.text.replaceAll(',','.'))??0,'method':method,'note':note.text}),child:const Text('Enregistrer'))],
+    )));
+    if(result==null)return;
+    final value=result['amount'] as double;
+    if(value<=0||value>balance){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Montant invalide ou supérieur à la dette.')));return;}
+    setState(()=>busy=true);
+    try{
+      await ref.read(customerPaymentRepositoryProvider).collect(businessId:businessId,customerId:customer['id'].toString(),amount:value,paymentMethod:result['method'].toString(),note:result['note'].toString());
+      try{await ref.read(syncServiceProvider).syncPending();}catch(_){}
+      await ref.read(customerRepositoryProvider).pullCloud(businessId);
+      if(mounted){setState((){});ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Encaissement enregistré.')));}
+    }catch(error){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(error.toString().replaceFirst('Bad state: ',''))));}
+    finally{if(mounted)setState(()=>busy=false);}
+    amount.dispose();note.dispose();
+  }
 
   Future<void> _edit(String? businessId,Map<String,Object?>? customer) async {
     if(busy)return;
