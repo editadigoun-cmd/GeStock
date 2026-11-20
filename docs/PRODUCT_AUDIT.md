@@ -2,7 +2,7 @@
 
 Audit effectué sur `main` le 20 novembre 2026 à partir de README, docs/IMPLEMENTATION_STATUS.md, docs/ARCHITECTURE.md, backend/src/schema.ts et mobile/lib/data/services/sync_service.dart.
 
-> Cet inventaire est évolutif. « Présent en base/backend » ne signifie pas que l'écran mobile existe ni que le parcours est fonctionnel. Les tests sur appareil restent nécessaires. Progression du 20 novembre 2026 : modules Clients et Fournisseurs développés sur main (migrations locales, écrans CRUD hors ligne, API cloud de lecture et sync push). Clients : sélection facultative au POS. Module Achats/Réceptions en cours : réception multi-produits hors ligne, mise à jour du stock, route cloud et sync transactionnelle. CI et tests appareil à confirmer. Aucun nouvel APK de distribution ne doit être publié avant la fin de l'audit et des tests. Aucun nouvel APK de distribution ne doit être publié avant la fin de l'audit et des tests.
+> Cet inventaire est évolutif. « Présent en base/backend » ne signifie pas que l'écran mobile existe ni que le parcours est fonctionnel. Les tests sur appareil restent nécessaires. Progression du 20 novembre 2026 : modules Clients et Fournisseurs développés sur main (migrations locales, écrans CRUD hors ligne, API cloud de lecture et sync push). Clients : sélection facultative au POS. Module Achats/Réceptions en cours : réception multi-produits hors ligne, mise à jour du stock, route cloud et sync transactionnelle. CI et tests appareil à confirmer. Aucun nouvel APK de distribution ne doit être publié avant la fin de l'audit et des tests.
 
 Progression 20 novembre 2026 : module Employés ajouté (liste, ajout d’un compte existant par e-mail, rôles gestionnaire/caissier/employé, désactivation/réactivation). L’invitation par e-mail/lien d’inscription n’est pas encore disponible. Module Rapports & Statistiques ajouté, CI en cours.\n\n## Statuts
 
@@ -32,7 +32,7 @@ Progression 20 novembre 2026 : module Employés ajouté (liste, ajout d’un com
 | Paiements multiples | Schema ventes/paiements | UI et tests à vérifier |
 | Retours / remboursements | Développé, CI réussie | Retour partiel/total par vente, validation quantités, motif, méthode de remboursement, réintégration stock, ajustement dette client et sync offline; tests appareil à confirmer |
 | Crédit / dette client | Développé, CI passée, migration/API déployées | Vente à crédit avec acompte ou paiement différé, client obligatoire, solde dû local/cloud, encaissements ultérieurs hors ligne et historique API; tests appareil et parcours métier à confirmer |
-| Rapports & statistiques | Développé, CI en cours | Chiffre d’affaires, encaissements, dépenses, marge brute estimée, résultat estimé, stock, stock bas et top produits sur périodes aujourd’hui/7/30 jours (données locales); tests appareil à confirmer |\n| Sessions de caisse | Développé, CI réussie | Ouverture fond initial, calcul espèces (ventes, recouvrements, dépenses, remboursements), montant théorique, clôture, montant réel, écart, historique local/cloud et sync hors ligne; tests appareil à confirmer |
+| Rapports & statistiques | Développé, CI à confirmer | Chiffre d’affaires, encaissements, dépenses, marge brute estimée, résultat estimé, stock, stock bas et top produits sur périodes aujourd’hui/7/30 jours (données locales); tests appareil à confirmer |\n| Sessions de caisse | Développé, CI réussie | Ouverture fond initial, calcul espèces (ventes, recouvrements, dépenses, remboursements), montant théorique, clôture, montant réel, écart, historique local/cloud et sync hors ligne; tests appareil à confirmer |
 | Dépenses | Développé, CI passée, API déployée | Enregistrement hors ligne, catégories et synchronisation; tests appareil à confirmer |
 | Reçus / impression | Manquant | Implémenter |
 | Tableau de bord / statistiques | Limité | KPI, filtres et périodes |
@@ -40,7 +40,7 @@ Progression 20 novembre 2026 : module Employés ajouté (liste, ajout d’un com
 | Résolution conflits sync | Incomplète | UI et stratégies |
 | Multi-appareils | Prévu | Tester données partagées |
 | Gestion utilisateurs / rôles | Admin CRUD incomplet | Implémenter |
-| Invitations | Manquant | Implémenter |
+| Invitations employés | Développé, CI à confirmer | E-mail Resend, lien sécurisé expirant après 7 jours, inscription ou connexion sur page web, acceptation et rattachement au business; secrets e-mail à configurer |
 | Email verification | Manquant | Implémenter |
 | Récupération mot de passe par email | Manquant | Implémenter |
 | Journal/audit | Tables prévues | Interface et événements |
