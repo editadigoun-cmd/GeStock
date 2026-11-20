@@ -73,7 +73,7 @@ class SyncService {
       final pending = await db.rawQuery("""
         SELECT id,business_id,entity_type,entity_id,operation,payload,created_at,attempts
         FROM outbox WHERE status='queued'
-        ORDER BY CASE entity_type WHEN 'business' THEN 0 WHEN 'product' THEN 1 WHEN 'stock_movement' THEN 2 WHEN 'customer' THEN 3 WHEN 'supplier' THEN 4 WHEN 'purchase' THEN 5 WHEN 'expense' THEN 6 WHEN 'sale' THEN 7 WHEN 'customer_payment' THEN 8 ELSE 9 END,
+        ORDER BY CASE entity_type WHEN 'business' THEN 0 WHEN 'product' THEN 1 WHEN 'stock_movement' THEN 2 WHEN 'customer' THEN 3 WHEN 'supplier' THEN 4 WHEN 'purchase' THEN 5 WHEN 'expense' THEN 6 WHEN 'sale' THEN 7 WHEN 'customer_payment' THEN 8 WHEN 'sale_return' THEN 9 ELSE 10 END,
         created_at ASC,rowid ASC LIMIT 30
       """);
       if (pending.isEmpty) break;
@@ -109,6 +109,10 @@ class SyncService {
               await txn.update('suppliers', {'sync_state': 'synced'}, where: 'id = ?', whereArgs: [entityId]);
             } else if (type == 'customer_payment') {
               await txn.update('customer_payments', {'sync_state': 'synced'}, where: 'id = ?', whereArgs: [entityId]);
+            } else if (type == 'sale_return') {
+              await txn.update('sale_returns', {'sync_state': 'synced'}, where: 'id = ?', whereArgs: [entityId]);
+              await txn.update('stock_movements', {'sync_state': 'synced'}, where: 'source_type = ? AND source_id = ?', whereArgs: ['sale_return', entityId]);
+              await txn.update('products', {'sync_state': 'synced'}, where: 'business_id = ? AND id IN (SELECT product_id FROM sale_return_items WHERE return_id = ?)', whereArgs: [businessId, entityId]);
             } else if (type == 'sale') {
               await txn.update('sales', {'sync_state': 'synced'}, where: 'id = ?', whereArgs: [entityId]);
               await txn.update('stock_movements', {'sync_state': 'synced'}, where: 'source_type = ? AND source_id = ?', whereArgs: ['sale', entityId]);
@@ -132,6 +136,8 @@ class SyncService {
             await db.update('suppliers', {'sync_state': status}, where: 'id = ?', whereArgs: [operationRow['entity_id']]);
           } else if (operationType == 'customer_payment') {
             await db.update('customer_payments', {'sync_state': status}, where: 'id = ?', whereArgs: [operationRow['entity_id']]);
+          } else if (operationType == 'sale_return') {
+            await db.update('sale_returns', {'sync_state': status}, where: 'id = ?', whereArgs: [operationRow['entity_id']]);
           } else if (operationType == 'sale') {
             await db.update('sales', {'sync_state': status}, where: 'id = ?', whereArgs: [operationRow['entity_id']]);
             await db.update('stock_movements', {'sync_state': status}, where: 'source_type = ? AND source_id = ?', whereArgs: ['sale', operationRow['entity_id']]);
