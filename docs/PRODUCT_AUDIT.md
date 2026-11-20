@@ -36,7 +36,7 @@ Audit effectué sur `main` le 20 novembre 2026 à partir de README, docs/IMPLEME
 | Dépenses | Schema backend existe | UI, catégories et reporting |
 | Reçus / impression | Manquant | Implémenter |
 | Tableau de bord / statistiques | Limité | KPI, filtres et périodes |
-| Synchronisation hors ligne | Code/outbox présent | Test appareil; sync cloud et conflits |
+| Synchronisation hors ligne | Code/outbox et pull des niveaux de stock cloud développés | Test appareil; sync cloud et conflits |
 | Résolution conflits sync | Incomplète | UI et stratégies |
 | Multi-appareils | Prévu | Tester données partagées |
 | Gestion utilisateurs / rôles | Admin CRUD incomplet | Implémenter |
