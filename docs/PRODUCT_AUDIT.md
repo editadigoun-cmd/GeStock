@@ -2,7 +2,7 @@
 
 Audit effectué sur `main` le 20 novembre 2026 à partir de README, docs/IMPLEMENTATION_STATUS.md, docs/ARCHITECTURE.md, backend/src/schema.ts et mobile/lib/data/services/sync_service.dart.
 
-> Cet inventaire est évolutif. « Présent en base/backend » ne signifie pas que l'écran mobile existe ni que le parcours est fonctionnel. Les tests sur appareil restent nécessaires. Progression du 20 novembre 2026 : Clients, Fournisseurs, Achats/Réceptions, Retours, Crédit, Caisse, Dépenses, Rapports, Support, Inventaire physique et reçus PDF sont développés. La génération du reçu 80 mm et l'impression/partage natifs sont ajoutés à l'historique des ventes. CI Flutter/backend réussie; déploiement Cloudflare et build APK validés. Les tests physiques restent requis.
+> Cet inventaire est évolutif. « Présent en base/backend » ne signifie pas que l'écran mobile existe ni que le parcours est fonctionnel. Les tests sur appareil restent nécessaires. Progression du 20 novembre 2026 : Clients, Fournisseurs, Achats/Réceptions, Retours, Crédit, Caisse, Dépenses, Rapports, Support, Inventaire physique, reçus PDF et transferts entre dépôts sont développés. La génération du reçu 80 mm et l'impression/partage natifs sont ajoutés à l'historique des ventes. CI Flutter/backend réussie; déploiement Cloudflare et build APK validés. Les tests physiques restent requis.
 
 Progression 20 novembre 2026 : module Employés et invitations par e-mail ajoutés (lien sécurisé, expiration 7 jours, inscription ou connexion puis acceptation). Config Resend à compléter avant envoi réel : RESEND_API_KEY et EMAIL_FROM comme secrets Cloudflare. Rapports & Statistiques ajoutés. Permissions métier vérifiées côté API pour les principaux flux et synchronisation
 
@@ -26,7 +26,7 @@ Progression 20 novembre 2026 : module Employés et invitations par e-mail ajout�
 | Stock / mouvements | Partiel | Vérifier entrées, sorties, ajustements |
 | Inventaire | À vérifier / incomplet | Comptage, écarts, validation |
 | Entrepôts / magasins | Structure backend | Écrans et workflow |
-| Transferts entre magasins | Incomplet | Implémenter |
+| Transferts entre magasins | Développé (en ligne) | Création de dépôts, transferts multi-produits, contrôle de stock, mouvements source/destination, historique et idempotence; tests terrain encore requis |
 | Clients | Développé, CI passée, API déployée | CRUD mobile hors ligne, API cloud et sync push, sélection facultative en POS; tests appareil à confirmer |
 | Fournisseurs | Développé, CI passée, API déployée | CRUD mobile hors ligne, API cloud et sync push; tests appareil à confirmer |
 | Achats | Développé, CI passée | Réception multi-produits hors ligne, mise à jour locale du stock, API cloud et sync transactionnelle; tests appareil à confirmer |
