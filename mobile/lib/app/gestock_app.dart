@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../data/services/auto_sync_runner.dart';
+import 'providers.dart';
 import 'package:go_router/go_router.dart';
 import '../features/auth/sign_in_screen.dart';
 import '../features/business/business_setup_screen.dart';
@@ -53,9 +55,12 @@ final appRouterProvider = Provider<GoRouter>((ref) => GoRouter(
 class GeStockApp extends ConsumerWidget {
   const GeStockApp({super.key});
   @override
-  Widget build(BuildContext context, WidgetRef ref) => MaterialApp.router(
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(autoSyncProvider);
+    return MaterialApp.router(
     title: 'GeStock', debugShowCheckedModeBanner: false,
     theme: GeStockTheme.light, darkTheme: GeStockTheme.dark,
     themeMode: ThemeMode.system, routerConfig: ref.watch(appRouterProvider),
   );
+  }
 }
