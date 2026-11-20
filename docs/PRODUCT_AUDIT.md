@@ -33,7 +33,7 @@ Audit effectué sur `main` le 20 novembre 2026 à partir de README, docs/IMPLEME
 | Retours / remboursements | Manquant | Implémenter |
 | Crédit / dette client | Manquant | Implémenter |
 | Sessions de caisse | Incomplet | Ouverture, clôture, rapprochement |
-| Dépenses | En cours d'implémentation | Enregistrement hors ligne, catégories, API cloud et sync; CI et tests appareil à confirmer |
+| Dépenses | Développé, CI passée | Enregistrement hors ligne, catégories, API cloud et sync; déploiement API et tests appareil à confirmer |
 | Reçus / impression | Manquant | Implémenter |
 | Tableau de bord / statistiques | Limité | KPI, filtres et périodes |
 | Synchronisation hors ligne | Code/outbox et pull des niveaux de stock cloud développés | Test appareil; sync cloud et conflits |
