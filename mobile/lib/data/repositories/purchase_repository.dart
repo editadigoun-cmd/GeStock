@@ -65,7 +65,7 @@ class PurchaseRepository {
         await txn.insert('purchase_items',{'id':item['id'],'purchase_id':id,'product_id':item['product_id'],'product_name_snapshot':item['product_name_snapshot'],'quantity':item['quantity'],'unit_cost':item['unit_cost'],'line_total':item['line_total']});
         final product=(await txn.query('products',where:'id=?',whereArgs:[item['product_id']],limit:1)).first;
         final current=(product['quantity'] as num?)?.toDouble()??0;
-        await txn.update('products',{'quantity':current+(item['quantity'] as num).toDouble(),'updated_at':now,'sync_state':'pending'},where:'id=?',whereArgs:[item['product_id']]);
+        await txn.update('products',{'quantity':current+(item['quantity'] as num).toDouble(),'updated_at':now},where:'id=?',whereArgs:[item['product_id']]);
         await txn.insert('stock_movements',{'id':_uuid.v4(),'business_id':businessId,'warehouse_id':warehouseId,'product_id':item['product_id'],'movement_type':'purchase','quantity_delta':item['quantity'],'note':'Réception $number','occurred_at':now,'sync_state':'pending','source_type':'purchase','source_id':id});
       }
       await txn.insert('outbox',{'id':id,'business_id':businessId,'entity_type':'purchase','entity_id':id,'operation':'receive','payload':jsonEncode(payload),'created_at':now,'attempts':0,'status':'queued'});
