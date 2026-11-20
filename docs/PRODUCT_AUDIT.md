@@ -2,9 +2,9 @@
 
 Audit effectué sur `main` le 20 novembre 2026 à partir de README, docs/IMPLEMENTATION_STATUS.md, docs/ARCHITECTURE.md, backend/src/schema.ts et mobile/lib/data/services/sync_service.dart.
 
-> Cet inventaire est évolutif. « Présent en base/backend » ne signifie pas que l'écran mobile existe ni que le parcours est fonctionnel. Les tests sur appareil restent nécessaires. Progression du 20 novembre 2026 : modules Clients et Fournisseurs développés sur main (migrations locales, écrans CRUD hors ligne, API cloud de lecture et sync push). Clients : sélection facultative au POS. Module Achats/Réceptions en cours : réception multi-produits hors ligne, mise à jour du stock, route cloud et sync transactionnelle. CI et tests appareil à confirmer. Aucun nouvel APK de distribution ne doit être publié avant la fin de l'audit et des tests.
+> Cet inventaire est évolutif. « Présent en base/backend » ne signifie pas que l'écran mobile existe ni que le parcours est fonctionnel. Les tests sur appareil restent nécessaires. Progression du 20 novembre 2026 : Clients, Fournisseurs, Achats/Réceptions, Retours, Crédit, Caisse, Dépenses, Rapports, Support, Inventaire physique et reçus PDF sont développés. La génération du reçu 80 mm et l'impression/partage natifs sont ajoutés à l'historique des ventes. CI Flutter/backend réussie; déploiement Cloudflare et build APK validés. Les tests physiques restent requis.
 
-Progression 20 novembre 2026 : module Employés et invitations par e-mail ajoutés (lien sécurisé, expiration 7 jours, inscription ou connexion puis acceptation). Config Resend à compléter avant envoi réel : RESEND_API_KEY et EMAIL_FROM comme secrets Cloudflare. Rapports & Statistiques ajoutés, CI à confirmer.
+Progression 20 novembre 2026 : module Employés et invitations par e-mail ajoutés (lien sécurisé, expiration 7 jours, inscription ou connexion puis acceptation). Config Resend à compléter avant envoi réel : RESEND_API_KEY et EMAIL_FROM comme secrets Cloudflare. Rapports & Statistiques ajoutés. Permissions métier vérifiées côté API pour les principaux flux et synchronisation
 
 ## Statuts
 
@@ -37,12 +37,12 @@ Progression 20 novembre 2026 : module Employés et invitations par e-mail ajout�
 | Rapports & statistiques | Développé, CI à confirmer | Chiffre d’affaires, encaissements, dépenses, marge brute estimée, résultat estimé, stock, stock bas et top produits sur périodes aujourd’hui/7/30 jours (données locales); tests appareil à confirmer |
 | Sessions de caisse | Développé, CI réussie | Ouverture fond initial, calcul espèces (ventes, recouvrements, dépenses, remboursements), montant théorique, clôture, montant réel, écart, historique local/cloud et sync hors ligne; tests appareil à confirmer |
 | Dépenses | Développé, CI passée, API déployée | Enregistrement hors ligne, catégories et synchronisation; tests appareil à confirmer |
-| Reçus / impression | Manquant | Implémenter |
+| Reçus / impression | Développé | Reçu PDF 80 mm depuis l’historique de vente, impression/partage natifs; test imprimante physique à faire |
 | Tableau de bord / statistiques | Limité | KPI, filtres et périodes |
 | Synchronisation hors ligne | CI passée; pull cloud des niveaux de stock | Test appareil; sync cloud et conflits |
 | Résolution conflits sync | Incomplète | UI et stratégies |
 | Multi-appareils | Prévu | Tester données partagées |
-| Gestion utilisateurs / rôles | Admin CRUD incomplet | Implémenter |
+| Gestion utilisateurs / rôles | Partiel | API applique les permissions par rôle sur les principaux flux; audit exhaustif et restrictions UI restantes |
 | Invitations employés | Développé, CI à confirmer | E-mail Resend, lien sécurisé expirant après 7 jours, inscription ou connexion sur page web, acceptation et rattachement au business; secrets e-mail à configurer |
 | Email verification | Manquant | Implémenter |
 | Récupération mot de passe par email | Manquant | Implémenter |

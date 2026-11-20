@@ -16,10 +16,10 @@ GeStock is an offline-first business management application for independent busi
 - GitHub main branch only.
 
 ## Verification
-The latest main CI run completed backend tests/typecheck, Flutter analysis/tests, D1 migrations, API health checks and an end-to-end authentication smoke test. The latest Android release build passed signature and SHA-256 checks. See [implementation status](docs/IMPLEMENTATION_STATUS.md) and the [migration/rollback plan](docs/AUTH_MIGRATION_ROLLBACK.md).
+The latest main CI passed backend tests/typecheck and Flutter analysis/tests. Cloudflare D1 migrations, API deployment and health checks passed; the authentication smoke test is running. The latest Android release build passed signature and SHA-256 checks. See [implementation status](docs/IMPLEMENTATION_STATUS.md) and the [migration/rollback plan](docs/AUTH_MIGRATION_ROLLBACK.md).
 
 ## Current limitations
-The admin console is a monitoring/read-only dashboard. User/role CRUD, invitations, email verification/password recovery, several inventory/POS workflows, physical-device sync testing and store publication are not complete. Do not treat this as a production-ready public release yet.
+The admin console is a monitoring/read-only dashboard. User/role CRUD, invitations, email verification/password recovery, warehouse transfers, ad integration, subscription billing, physical-device testing and store publication are not complete. Printable PDF sales receipts have been added; physical printer validation remains. Do not treat this as a production-ready public release yet.
 
 ## Repository
 - mobile/: Flutter app.
