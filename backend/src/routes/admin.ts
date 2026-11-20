@@ -204,3 +204,84 @@ adminRoutes.get('/users', async (c) => {
     : await db.select(fields).from(appUsers).orderBy(desc(appUsers.createdAt)).limit(100);
   return c.json({ data: rows, count: rows.length, capped: rows.length === 100 });
 });
+
+const audit=async(c:Context<AppEnv>,action:string,entityType:string,entityId:string|null,before:unknown,after:unknown)=>{
+ await c.env.DB.prepare('INSERT INTO platform_audit_logs(id,actor_email,action,entity_type,entity_id,before_data,after_data,created_at) VALUES(?,?,?,?,?,?,?,?)').bind(crypto.randomUUID(),c.get('email'),action,entityType,entityId,before==null?null:JSON.stringify(before),after==null?null:JSON.stringify(after),new Date().toISOString()).run();
+};
+adminRoutes.get('/users/:id',async c=>{
+ const id=c.req.param('id');const user=await c.env.DB.prepare('SELECT id,email,display_name,email_verified,status,created_at,updated_at FROM app_users WHERE id=?').bind(id).first();
+ if(!user)return c.json({error:'USER_NOT_FOUND'},404);
+ const memberships=await c.env.DB.prepare("SELECT bm.business_id,b.name AS business_name,bm.role,bm.status,bm.permissions FROM business_memberships bm JOIN businesses b ON b.id=bm.business_id WHERE bm.user_id=? ORDER BY b.name").bind(id).all();
+ return c.json({data:{...user,memberships:memberships.results??[]}});
+});
+adminRoutes.patch('/users/:id',async c=>{
+ const id=c.req.param('id'),p=await c.req.json().catch(()=>null);
+ if(!p||typeof p!=='object'||!['active','suspended'].includes(p.status))return c.json({error:'VALIDATION_ERROR'},422);
+ if(id===c.get('userId'))return c.json({error:'CANNOT_SUSPEND_SELF'},409);
+ const before=await c.env.DB.prepare('SELECT id,email,status FROM app_users WHERE id=?').bind(id).first<any>();
+ if(!before)return c.json({error:'USER_NOT_FOUND'},404);
+ await c.env.DB.prepare('UPDATE app_users SET status=?,updated_at=? WHERE id=?').bind(p.status,new Date().toISOString(),id).run();
+ if(p.status==='suspended')await c.env.DB.prepare('UPDATE auth_sessions SET revoked_at=? WHERE user_id=? AND revoked_at IS NULL').bind(new Date().toISOString(),id).run();
+ const after={...before,status:p.status};await audit(c,p.status==='suspended'?'user.suspend':'user.activate','user',id,before,after);
+ return c.json({data:after});
+});
+adminRoutes.patch('/businesses/:id/status',async c=>{
+ const id=c.req.param('id'),p=await c.req.json().catch(()=>null);
+ if(!p||!['active','suspended'].includes(p.status))return c.json({error:'VALIDATION_ERROR'},422);
+ const before=await c.env.DB.prepare('SELECT id,name,status FROM businesses WHERE id=?').bind(id).first<any>();
+ if(!before)return c.json({error:'BUSINESS_NOT_FOUND'},404);
+ await c.env.DB.prepare('UPDATE businesses SET status=?,updated_at=? WHERE id=?').bind(p.status,new Date().toISOString(),id).run();
+ const after={...before,status:p.status};await audit(c,'business.status.update','business',id,before,after);return c.json({data:after});
+});
+adminRoutes.get('/audit',async c=>{
+ const limit=Math.min(200,Math.max(1,Number(c.req.query('limit')||100)));
+ const rows=await c.env.DB.prepare('SELECT id,actor_email,action,entity_type,entity_id,before_data,after_data,created_at FROM platform_audit_logs ORDER BY created_at DESC LIMIT ?').bind(limit).all();
+ return c.json({data:rows.results??[]});
+});
+adminRoutes.get('/settings',async c=>{
+ const rows=await c.env.DB.prepare('SELECT setting_key,setting_value,updated_by,updated_at FROM platform_settings ORDER BY setting_key').all();
+ return c.json({data:(rows.results??[]).map((r:any)=>({...r,setting_value:JSON.parse(String(r.setting_value))}))});
+});
+adminRoutes.put('/settings/:key',async c=>{
+ const key=c.req.param('key');if(!/^[a-z][a-z0-9_.-]{1,80}$/.test(key))return c.json({error:'INVALID_SETTING_KEY'},400);
+ const value=await c.req.json().catch(()=>null);if(value===null)return c.json({error:'INVALID_JSON'},400);
+ const before=await c.env.DB.prepare('SELECT setting_value FROM platform_settings WHERE setting_key=?').bind(key).first<any>();
+ const serialized=JSON.stringify(value);if(serialized.length>10000)return c.json({error:'SETTING_TOO_LARGE'},413);
+ const now=new Date().toISOString();
+ await c.env.DB.prepare('INSERT INTO platform_settings(setting_key,setting_value,updated_by,updated_at) VALUES(?,?,?,?) ON CONFLICT(setting_key) DO UPDATE SET setting_value=excluded.setting_value,updated_by=excluded.updated_by,updated_at=excluded.updated_at').bind(key,serialized,c.get('email'),now).run();
+ await audit(c,'setting.update','setting',key,before?JSON.parse(before.setting_value):null,value);return c.json({data:{key,value,updated_at:now}});
+});
+adminRoutes.get('/subscriptions',async c=>{
+ const rows=await c.env.DB.prepare('SELECT s.*,b.name business_name,b.currency_code FROM platform_subscriptions s JOIN businesses b ON b.id=s.business_id ORDER BY s.updated_at DESC LIMIT 200').all();
+ return c.json({data:rows.results??[]});
+});
+adminRoutes.put('/subscriptions/:businessId',async c=>{
+ const businessId=c.req.param('businessId'),p=await c.req.json().catch(()=>null);
+ if(!p||typeof p.plan_code!=='string'||!['free','plus','pro','business'].includes(p.plan_code)||!['trial','active','past_due','cancelled','expired'].includes(p.status))return c.json({error:'VALIDATION_ERROR'},422);
+ const business=await c.env.DB.prepare('SELECT id FROM businesses WHERE id=?').bind(businessId).first();if(!business)return c.json({error:'BUSINESS_NOT_FOUND'},404);
+ const now=new Date().toISOString(),id=crypto.randomUUID();
+ const before=await c.env.DB.prepare('SELECT * FROM platform_subscriptions WHERE business_id=?').bind(businessId).first<any>();
+ await c.env.DB.prepare('INSERT INTO platform_subscriptions(id,business_id,plan_code,status,started_at,ends_at,provider,external_reference,metadata,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(business_id) DO UPDATE SET plan_code=excluded.plan_code,status=excluded.status,started_at=excluded.started_at,ends_at=excluded.ends_at,provider=excluded.provider,external_reference=excluded.external_reference,metadata=excluded.metadata,updated_at=excluded.updated_at').bind(before?.id??id,businessId,p.plan_code,p.status,p.started_at??before?.started_at??now,p.ends_at??null,p.provider??null,p.external_reference??null,JSON.stringify(p.metadata??{}),before?.created_at??now,now).run();
+ const after=await c.env.DB.prepare('SELECT * FROM platform_subscriptions WHERE business_id=?').bind(businessId).first();await audit(c,'subscription.upsert','subscription',businessId,before,after);return c.json({data:after});
+});
+adminRoutes.get('/ads',async c=>{const r=await c.env.DB.prepare('SELECT * FROM platform_ad_settings ORDER BY placement_key').all();return c.json({data:r.results??[]});});
+adminRoutes.put('/ads/:placement',async c=>{
+ const placement=c.req.param('placement');if(!/^[a-z0-9_.-]{2,80}$/.test(placement))return c.json({error:'INVALID_PLACEMENT'},400);
+ const p=await c.req.json().catch(()=>null);if(!p||typeof p.enabled!=='boolean'||!['admob','none'].includes(p.provider)||!Number.isInteger(p.frequency_cap)||p.frequency_cap<0||p.frequency_cap>100)return c.json({error:'VALIDATION_ERROR'},422);
+ const before=await c.env.DB.prepare('SELECT * FROM platform_ad_settings WHERE placement_key=?').bind(placement).first<any>(),now=new Date().toISOString();
+ await c.env.DB.prepare('INSERT INTO platform_ad_settings(placement_key,enabled,provider,ad_unit_id,frequency_cap,updated_by,updated_at) VALUES(?,?,?,?,?,?,?) ON CONFLICT(placement_key) DO UPDATE SET enabled=excluded.enabled,provider=excluded.provider,ad_unit_id=excluded.ad_unit_id,frequency_cap=excluded.frequency_cap,updated_by=excluded.updated_by,updated_at=excluded.updated_at').bind(placement,p.enabled?1:0,p.provider,p.ad_unit_id??null,p.frequency_cap,c.get('email'),now).run();
+ const after=await c.env.DB.prepare('SELECT * FROM platform_ad_settings WHERE placement_key=?').bind(placement).first();await audit(c,'ads.setting.update','ad_placement',placement,before,after);return c.json({data:after});
+});
+adminRoutes.get('/support',async c=>{
+ const status=c.req.query('status'),allowed=['open','in_progress','resolved','closed'];
+ if(status&&!allowed.includes(status))return c.json({error:'INVALID_STATUS'},400);
+ const q=status?c.env.DB.prepare('SELECT t.*,u.email,u.display_name,b.name business_name FROM support_tickets t JOIN app_users u ON u.id=t.user_id LEFT JOIN businesses b ON b.id=t.business_id WHERE t.status=? ORDER BY t.created_at DESC LIMIT 200').bind(status):c.env.DB.prepare('SELECT t.*,u.email,u.display_name,b.name business_name FROM support_tickets t JOIN app_users u ON u.id=t.user_id LEFT JOIN businesses b ON b.id=t.business_id ORDER BY t.created_at DESC LIMIT 200');
+ const rows=await q.all();return c.json({data:rows.results??[]});
+});
+adminRoutes.patch('/support/:id',async c=>{
+ const id=c.req.param('id'),p=await c.req.json().catch(()=>null);
+ if(!p||!['open','in_progress','resolved','closed'].includes(p.status)||typeof p.admin_reply!=='string'||p.admin_reply.length>4000)return c.json({error:'VALIDATION_ERROR'},422);
+ const before=await c.env.DB.prepare('SELECT * FROM support_tickets WHERE id=?').bind(id).first<any>();if(!before)return c.json({error:'TICKET_NOT_FOUND'},404);
+ const now=new Date().toISOString();await c.env.DB.prepare('UPDATE support_tickets SET status=?,admin_reply=?,updated_at=? WHERE id=?').bind(p.status,p.admin_reply.trim()||null,now,id).run();
+ const after=await c.env.DB.prepare('SELECT * FROM support_tickets WHERE id=?').bind(id).first();await audit(c,'support.ticket.update','support_ticket',id,before,after);return c.json({data:after});
+});
