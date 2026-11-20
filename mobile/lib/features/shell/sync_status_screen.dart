@@ -20,7 +20,7 @@ class _SyncStatusScreenState extends ConsumerState<SyncStatusScreen>{
       int q=0,f=0,c=0,t=0;
       for(final r in counts){final n=(r['count'] as num?)?.toInt()??0;t+=n;switch(r['status']){case 'queued':q=n;break;case 'failed':f=n;break;case 'conflict':c=n;break;}}
       final rows=await db.rawQuery("SELECT id,entity_type,operation,entity_id,created_at,attempts,status FROM outbox ORDER BY created_at DESC LIMIT 50");
-      if(!mounted)return;setState(()=>_queued=q,_failed=f,_conflict=c,_total=t,_rows=rows,_error=null);
+      if(!mounted)return;setState((){_queued=q;_failed=f;_conflict=c;_total=t;_rows=rows;_error=null;});
     }catch(e){if(mounted)setState(()=>_error=e.toString());}
     finally{if(mounted)setState(()=>_loading=false);}
   }
