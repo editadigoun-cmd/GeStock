@@ -13,6 +13,7 @@ import '../features/suppliers/suppliers_screen.dart';
 import '../features/purchases/purchases_screen.dart';
 import '../features/expenses/expenses_screen.dart';
 import '../features/cash/cash_screen.dart';
+import '../features/employees/employees_screen.dart';
 import '../features/shell/more_screen.dart';
 import '../features/shell/app_shell.dart';
 import '../theme/gestock_theme.dart';
@@ -33,6 +34,7 @@ final appRouterProvider = Provider<GoRouter>((ref) => GoRouter(
       GoRoute(path: '/purchases', builder: (_, __) => const PurchasesScreen()),
       GoRoute(path: '/expenses', builder: (_, __) => const ExpensesScreen()),
       GoRoute(path: '/cash', builder: (_, __) => const CashScreen()),
+      GoRoute(path: '/employees', builder: (_, __) => const EmployeesScreen()),
       GoRoute(path: '/businesses', builder: (_, __) => const BusinessesScreen()),
     ]),
   ],
