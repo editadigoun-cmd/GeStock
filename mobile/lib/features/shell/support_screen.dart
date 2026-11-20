@@ -14,7 +14,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen>{
  @override void initState(){super.initState();_load();}
  @override void dispose(){_subject.dispose();_message.dispose();super.dispose();}
  Future<void> _load()async{
-  try{final business=await ref.read(businessRepositoryProvider).active();final tickets=await ref.read(authRepositoryProvider).supportTickets();if(mounted)setState(()=>_tickets=tickets,_businessId=business?['id'] as String?,_loading=false);}
+  try{final business=await ref.read(businessRepositoryProvider).active();final tickets=await ref.read(authRepositoryProvider).supportTickets();if(mounted)setState(() {_tickets=tickets;_businessId=business?['id'] as String?;_loading=false;});}
   catch(e){if(mounted)setState(()=>_loading=false);}
  }
  Future<void> _send()async{
