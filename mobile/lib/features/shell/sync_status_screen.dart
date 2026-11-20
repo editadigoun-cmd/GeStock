@@ -19,7 +19,7 @@ class _SyncStatusScreenState extends ConsumerState<SyncStatusScreen>{
       final counts=await db.rawQuery("SELECT status,COUNT(*) AS count FROM outbox GROUP BY status");
       int q=0,f=0,c=0,t=0;
       for(final r in counts){final n=(r['count'] as num?)?.toInt()??0;t+=n;switch(r['status']){case 'queued':q=n;break;case 'failed':f=n;break;case 'conflict':c=n;break;}}
-      final rows=await db.rawQuery("SELECT id,entity_type,operation,entity_id,created_at,attempts,status FROM outbox ORDER BY created_at DESC LIMIT 50");
+      final rows=await db.rawQuery("SELECT id,entity_type,operation,entity_id,created_at,attempts,status,last_error FROM outbox ORDER BY created_at DESC LIMIT 50");
       if(!mounted)return;setState((){_queued=q;_failed=f;_conflict=c;_total=t;_rows=rows;_error=null;});
     }catch(e){if(mounted)setState(()=>_error=e.toString());}
     finally{if(mounted)setState(()=>_loading=false);}
@@ -44,7 +44,7 @@ class _SyncStatusScreenState extends ConsumerState<SyncStatusScreen>{
       if(_failed>0||_conflict>0)Padding(padding:const EdgeInsets.only(top:8),child:OutlinedButton.icon(onPressed:_working?null:()=>_sync(retry:true),icon:const Icon(Icons.replay),label:const Text('Réessayer les opérations en échec / conflit'))),
       const SizedBox(height:18),const Text('Journal local',style:TextStyle(fontSize:16,fontWeight:FontWeight.w900)),const SizedBox(height:8),
       if(_rows.isEmpty)const Card(child:Padding(padding:EdgeInsets.all(14),child:Text('Aucune opération locale.'))),
-      ..._rows.map((r)=>Card(child:ListTile(leading:Icon(_icon(r['status']?.toString()),color:_color(r['status']?.toString())),title:Text(r['entity_type'].toString()+' · '+r['operation'].toString(),style:const TextStyle(fontWeight:FontWeight.w700)),subtitle:Text('ID '+r['entity_id'].toString()+'\n'+r['created_at'].toString()+' · Tentatives '+r['attempts'].toString()),trailing:Text(r['status']?.toString()??'—')))),
+      ..._rows.map((r)=>Card(child:ListTile(leading:Icon(_icon(r['status']?.toString()),color:_color(r['status']?.toString())),title:Text(r['entity_type'].toString()+' · '+r['operation'].toString(),style:const TextStyle(fontWeight:FontWeight.w700)),subtitle:Text('ID '+r['entity_id'].toString()+'\n'+r['created_at'].toString()+' · Tentatives '+r['attempts'].toString()+(r['last_error']==null?'':'\nErreur: '+r['last_error'].toString())),trailing:Text(r['status']?.toString()??'—')))),
     ])),
   );
   Widget _stat(String label,int value,Color color)=>Card(child:Padding(padding:const EdgeInsets.symmetric(vertical:14,horizontal:8),child:Column(children:[Text(label,style:const TextStyle(fontSize:11)),const SizedBox(height:5),Text(value.toString(),style:TextStyle(fontSize:23,fontWeight:FontWeight.w900,color:color))])));
