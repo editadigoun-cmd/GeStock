@@ -19,6 +19,7 @@ import '../features/reports/reports_screen.dart';
 import '../features/shell/more_screen.dart';
 import '../features/shell/app_shell.dart';
 import '../features/shell/sync_status_screen.dart';
+import '../features/shell/support_screen.dart';
 import '../theme/gestock_theme.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) => GoRouter(
@@ -30,6 +31,7 @@ final appRouterProvider = Provider<GoRouter>((ref) => GoRouter(
       GoRoute(path: '/home', builder: (_, __) => const DashboardScreen()),
       GoRoute(path: '/more', builder: (_, __) => const MoreScreen()),
       GoRoute(path: '/sync', builder: (_, __) => const SyncStatusScreen()),
+      GoRoute(path: '/support', builder: (_, __) => const SupportScreen()),
       GoRoute(path: '/inventory', builder: (_, __) => const InventoryScreen()),
       GoRoute(path: '/inventory-count', builder: (_, __) => const InventoryCountScreen()),
       GoRoute(path: '/products', builder: (_, __) => const ProductsScreen()),

@@ -143,6 +143,21 @@ class AuthRepository {
     if(response.statusCode==null||response.statusCode!>=400)throw Exception(_message(response.data));
   }
 
+  Future<List<Map<String,Object?>>> supportTickets() async {
+    final token=await getAccessToken();
+    final response=await _dio.get('/v1/support',options:Options(headers:{'Authorization':'Bearer $token'}));
+    if(response.statusCode==null||response.statusCode!>=400)throw Exception(_message(response.data));
+    final data=response.data;
+    if(data is Map&&data['data'] is List)return (data['data'] as List).whereType<Map>().map((r)=>Map<String,Object?>.from(r)).toList();
+    return [];
+  }
+  Future<void> createSupportTicket({required String subject,required String message,String? businessId}) async {
+    final token=await getAccessToken();
+    final payload={'subject':subject.trim(),'message':message.trim(),if(businessId!=null)'business_id':businessId};
+    final response=await _dio.post('/v1/support',data:payload,options:Options(headers:{'Authorization':'Bearer $token'}));
+    if(response.statusCode==null||response.statusCode!>=400)throw Exception(_message(response.data));
+  }
+
   Future<void> changePassword(String currentPassword, String newPassword) async {
     final token = await getAccessToken();
     final response = await _dio.post(
