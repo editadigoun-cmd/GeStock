@@ -119,7 +119,10 @@ class SalesRepository {
         'amount': paymentMethod == 'credit' ? paidAmount : totals.total, 'status': pendingPayment ? 'pending' : paymentMethod == 'credit' ? (paidAmount >= totals.total ? 'confirmed' : 'partial') : 'confirmed',
         'paid_at': pendingPayment || (paymentMethod == 'credit' && paidAmount <= 0) ? null : now, 'created_at': now,
       });
-      if (paymentMethod == 'credit' && customerId != null) {\n        await txn.rawUpdate('UPDATE customers SET balance_due = balance_due + ?, updated_at = ?, sync_state = ? WHERE id = ? AND business_id = ?', [totals.total - paidAmount, now, 'pending', customerId, businessId]);\n      }\n      await txn.insert('outbox', {
+      if (paymentMethod == 'credit' && customerId != null) {
+        await txn.rawUpdate('UPDATE customers SET balance_due = balance_due + ?, updated_at = ?, sync_state = ? WHERE id = ? AND business_id = ?', [totals.total - paidAmount, now, 'pending', customerId, businessId]);
+      }
+      await txn.insert('outbox', {
         'id': saleId, 'business_id': businessId, 'entity_type': 'sale', 'entity_id': saleId,
         'operation': 'create', 'payload': jsonEncode(payload), 'created_at': now, 'attempts': 0, 'status': 'queued',
       });
