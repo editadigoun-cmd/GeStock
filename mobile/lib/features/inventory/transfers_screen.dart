@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';\nimport 'package:uuid/uuid.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 import '../../app/providers.dart';
 
 class TransfersScreen extends ConsumerStatefulWidget {
@@ -22,7 +23,8 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
   String? businessId;
   String? sourceId;
   String? destinationId;
-  String? selectedProductId;\n  String? pendingTransferId;
+  String? selectedProductId;
+  String? pendingTransferId;
   final Map<String, double> cart = {};
   List<Map<String, Object?>> warehouses = [];
   List<Map<String, Object?>> levels = [];
