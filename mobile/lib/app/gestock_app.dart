@@ -9,6 +9,7 @@ import '../features/inventory/inventory_screen.dart';
 import '../features/products/products_screen.dart';
 import '../features/sales/sales_screen.dart';
 import '../features/customers/customers_screen.dart';
+import '../features/suppliers/suppliers_screen.dart';
 import '../features/shell/app_shell.dart';
 import '../theme/gestock_theme.dart';
 
@@ -23,6 +24,7 @@ final appRouterProvider = Provider<GoRouter>((ref) => GoRouter(
       GoRoute(path: '/products', builder: (_, __) => const ProductsScreen()),
       GoRoute(path: '/sales', builder: (_, __) => const SalesScreen()),
       GoRoute(path: '/customers', builder: (_, __) => const CustomersScreen()),
+      GoRoute(path: '/suppliers', builder: (_, __) => const SuppliersScreen()),
       GoRoute(path: '/businesses', builder: (_, __) => const BusinessesScreen()),
     ]),
   ],
