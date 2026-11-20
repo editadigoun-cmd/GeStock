@@ -369,7 +369,7 @@ syncRoutes.post('/batch', async (c) => {
       results.push({ operation_id: op.id, ...outcome });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'SYNC_FAILED';
-      const status = message === 'FORBIDDEN' || message === 'DEVICE_NOT_REGISTERED' ? 'rejected' : 'conflict';
+      const status = message === 'FORBIDDEN' || message === 'DEVICE_NOT_REGISTERED' ? 'rejected' : message.includes('CONFLICT') ? 'conflict' : 'rejected';
       results.push({ operation_id: op.id, status, error: message });
     }
   }
