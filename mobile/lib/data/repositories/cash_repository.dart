@@ -43,7 +43,7 @@ class CashRepository {
     final now=DateTime.now().toUtc().toIso8601String();final registerRows=await d.query('cash_registers',where:'business_id=? AND name=?',whereArgs:[businessId,'Caisse principale'],limit:1);
     final registerId=registerRows.isNotEmpty?registerRows.first['id'].toString():_uuid.v4();if(registerRows.isEmpty)await d.insert('cash_registers',{'id':registerId,'business_id':businessId,'name':'Caisse principale','is_active':1,'created_at':now});
     final id=_uuid.v4();final payload={'id':id,'business_id':businessId,'register_id':registerId,'name':'Caisse principale','opening_amount':openingAmount,'opened_at':now,'status':'open'};
-    await d.transaction((txn)async{await txn.insert('cash_sessions',{...payload,'closed_by':null,'closing_amount':null,'expected_amount':null,'closed_at':null,'created_at':now,'updated_at':now,'sync_state':'pending'});await txn.insert('outbox',{'id':_uuid.v4(),'business_id':businessId,'entity_type':'cash_session','entity_id':id,'operation':'open','payload':jsonEncode(payload),'created_at':now,'attempts':0,'status':'queued'});});
+    await d.transaction((txn)async{await txn.insert('cash_sessions',{'id':id,'business_id':businessId,'register_id':registerId,'opened_by':null,'closed_by':null,'opening_amount':openingAmount,'closing_amount':null,'expected_amount':null,'opened_at':now,'closed_at':null,'status':'open','created_at':now,'updated_at':now,'sync_state':'pending'});await txn.insert('outbox',{'id':_uuid.v4(),'business_id':businessId,'entity_type':'cash_session','entity_id':id,'operation':'open','payload':jsonEncode(payload),'created_at':now,'attempts':0,'status':'queued'});});
   }
 
   Future<void> close({required String businessId,required String sessionId,required double closingAmount})async{
