@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import 'package:uuid/uuid.dart';
 import '../../app/providers.dart';
 
 class TransfersScreen extends ConsumerStatefulWidget {
@@ -24,6 +25,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
   String? sourceId;
   String? destinationId;
   String? selectedProductId;
+  String? pendingTransferId;
   String? pendingTransferId;
   final Map<String, double> cart = {};
   List<Map<String, Object?>> warehouses = [];
@@ -151,7 +153,10 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
     setState(() { saving = true; });
     try {
       final token = await _token();
+      final transferId = pendingTransferId ?? const Uuid().v4();
+      pendingTransferId = transferId;
       final payload = {
+        'transfer_id': transferId,
         'business_id': businessId,
         'from_warehouse_id': sourceId,
         'to_warehouse_id': destinationId,
@@ -161,6 +166,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
       final response = await dio.post('/v1/stock/transfers', data: payload, options: Options(headers: {'Authorization': 'Bearer ' + token}));
       final number = response.data['data']?['transferNumber']?.toString() ?? 'Transfert enregistré';
       cart.clear();
+      pendingTransferId = null;
       noteController.clear();
       await _load(businessId!);
       try { await ref.read(syncServiceProvider).syncPending(); } catch (_) {}
