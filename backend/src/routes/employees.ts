@@ -43,7 +43,7 @@ employeeRoutes.post('/invitations',async c=>{
  const html=`<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:24px"><h2>Invitation à rejoindre ${biz?.name??'une entreprise'} sur GeStock</h2><p>Vous êtes invité(e) à rejoindre cette entreprise comme <strong>${input.role}</strong>.</p><p><a href="${url}" style="display:inline-block;padding:14px 22px;background:#146c43;color:#fff;text-decoration:none;border-radius:8px">Accepter l’invitation</a></p><p>Ce lien expire dans 7 jours. Si vous ne vous attendiez pas à cette invitation, ignorez cet e-mail.</p></div>`;
  const mail=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+apiKey,'Content-Type':'application/json'},body:JSON.stringify({from,to:[email],subject:'Invitation GeStock — '+(biz?.name??'Entreprise'),html})});
  if(!mail.ok){await c.env.DB.prepare("UPDATE business_invitations SET revoked_at=? WHERE id=?").bind(now(),id).run();return c.json({error:'EMAIL_SEND_FAILED',message:'L’invitation n’a pas pu être envoyée. Vérifiez la configuration du service e-mail.'},502);}
- return c.json({data:{id,email,role,expires_at:expires,status:'pending'}},201);
+ return c.json({data:{id,email,role:input.role,expires_at:expires,status:'pending'}},201);
 });
 employeeRoutes.post('/',async c=>{
  const p=z.object({business_id:z.string().uuid(),email:z.string().email().max(254),role:z.enum(roles).default('staff')}).safeParse(await c.req.json().catch(()=>null));
