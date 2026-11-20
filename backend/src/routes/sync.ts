@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../services/db.js';
-import { appUsers, businesses, businessMemberships, organizationMemberships, organizations, products, customers, customerPayments, suppliers, purchases, purchaseItems, expenses, stockMovements, stockLevels, syncDevices, syncOperations, warehouses } from '../schema.js';
+import { appUsers, businesses, businessMemberships, organizationMemberships, organizations, products, customers, customerPayments, saleReturns, saleReturnItems, sales, saleItems, suppliers, purchases, purchaseItems, expenses, stockMovements, stockLevels, syncDevices, syncOperations, warehouses } from '../schema.js';
 import { saleInputSchema, createSaleTransaction } from '../services/sales.js';
 import type { AppEnv } from '../middleware/auth.js';
 
@@ -39,7 +39,7 @@ syncRoutes.post('/devices/register', async (c) => {
 const operationSchema = z.object({
   id: z.string().uuid(),
   business_id: z.string().uuid(),
-  entity_type: z.enum(['business', 'product', 'customer', 'supplier', 'purchase', 'expense', 'customer_payment', 'stock_movement', 'sale']),
+  entity_type: z.enum(['business', 'product', 'customer', 'supplier', 'purchase', 'expense', 'customer_payment', 'sale_return', 'stock_movement', 'sale']),
   entity_id: z.string().uuid(),
   operation: z.string().min(1).max(40),
   payload: z.record(z.string(), z.unknown()),
@@ -111,6 +111,38 @@ async function applyOperation(authSubject: string, deviceId: string, op: z.infer
   const [membership] = await db.select({ id: businessMemberships.id }).from(businessMemberships)
     .where(and(eq(businessMemberships.businessId, op.business_id), eq(businessMemberships.userId, user.id), eq(businessMemberships.status, 'active'))).limit(1);
   if (!membership) throw new Error('FORBIDDEN');
+
+  if (op.entity_type === 'sale_return') {
+    const p=op.payload; const returnId=String(p.id??op.entity_id); const saleId=String(p.sale_id??'');
+    const reason=String(p.reason??'').trim(); const refundMethod=String(p.refund_method??'cash');
+    const returnedAt=String(p.returned_at??new Date().toISOString()); const items=Array.isArray(p.items)?p.items:[];
+    if(returnId!==op.entity_id||String(p.business_id??op.business_id)!==op.business_id||!z.string().uuid().safeParse(saleId).success||!reason||!['cash','mobile_money','card','bank_transfer','store_credit','other'].includes(refundMethod)||items.length<1)throw new Error('INVALID_RETURN_PAYLOAD');
+    const [sale]=await db.select().from(sales).where(and(eq(sales.id,saleId),eq(sales.businessId,op.business_id))).limit(1);
+    if(!sale)throw new Error('SALE_NOT_FOUND');
+    const soldItems=await db.select().from(saleItems).where(eq(saleItems.saleId,saleId));
+    const soldMap=new Map(soldItems.map(x=>[x.id,x]));
+    const returnRows=[];const stockWrites:any[]=[];let refundAmount=0;
+    for(const item of items){
+      const saleItemId=String(item.sale_item_id??'');const qty=Number(item.quantity);
+      const original=soldMap.get(saleItemId);if(!original||!Number.isFinite(qty)||qty<=0)throw new Error('INVALID_RETURN_ITEM');
+      const prior=await db.select({quantity:saleReturnItems.quantity}).from(saleReturnItems).where(eq(saleReturnItems.saleItemId,saleItemId));
+      const returned=prior.reduce((sum,x)=>sum+Number(x.quantity),0);if(returned+qty>Number(original.quantity)+1e-8)throw new Error('RETURN_QUANTITY_EXCEEDS_SOLD');
+      const unit=Number(original.lineTotal)/Number(original.quantity);const lineRefund=unit*qty;refundAmount+=lineRefund;
+      returnRows.push({id:crypto.randomUUID(),returnId,saleItemId,productId:original.productId,productNameSnapshot:original.productNameSnapshot,quantity:qty,unitPrice:Number(original.unitPrice),refundAmount:lineRefund});
+      if(original.productId){
+        const [movement]=await db.select({warehouseId:stockMovements.warehouseId}).from(stockMovements).where(and(eq(stockMovements.sourceType,'sale'),eq(stockMovements.sourceId,saleId),eq(stockMovements.productId,original.productId))).limit(1);
+        if(movement){
+          stockWrites.push(db.insert(stockMovements).values({id:crypto.randomUUID(),businessId:op.business_id,warehouseId:movement.warehouseId,productId:original.productId,movementType:'sale_return',quantityDelta:qty,sourceType:'sale_return',sourceId:returnId,actorUserId:user.id,occurredAt:returnedAt,createdAt:returnedAt}));
+          stockWrites.push(db.insert(stockLevels).values({id:crypto.randomUUID(),businessId:op.business_id,warehouseId:movement.warehouseId,productId:original.productId,quantity:qty,updatedAt:returnedAt}).onConflictDoUpdate({target:[stockLevels.warehouseId,stockLevels.productId],set:{quantity:sql`${stockLevels.quantity} + ${qty}`,updatedAt:returnedAt}}));
+        }
+      }
+    }
+    const number=String(p.return_number??('RET-'+returnId.slice(0,8).toUpperCase()));
+    const [existing]=await db.select({id:saleReturns.id}).from(saleReturns).where(eq(saleReturns.id,returnId)).limit(1);
+    if(existing)return {status:'applied',result:{id:returnId,synced:true,duplicate:true},duplicate:true};
+    await db.batch([db.insert(saleReturns).values({id:returnId,businessId:op.business_id,saleId,returnNumber:number,reason,refundMethod,refundAmount,status:'completed',returnedAt,createdBy:user.id}),...returnRows.map(x=>db.insert(saleReturnItems).values(x)),...stockWrites,db.update(sales).set({status:'returned'}).where(and(eq(sales.id,saleId),eq(sales.businessId,op.business_id))),db.insert(syncOperations).values(operationRecord(deviceId,op,{id:returnId,synced:true}))]);
+    return {status:'applied',result:{id:returnId,synced:true,refund_amount:refundAmount},duplicate:false};
+  }
 
   if (op.entity_type === 'sale') {
     const parsedSale = saleInputSchema.safeParse({ ...op.payload, id: op.entity_id, business_id: op.business_id });
