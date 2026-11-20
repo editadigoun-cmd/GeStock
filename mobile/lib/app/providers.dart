@@ -35,3 +35,9 @@ final syncServiceProvider = Provider((ref) => SyncService(
   database: ref.watch(databaseProvider),
   auth: ref.watch(authRepositoryProvider),
 ));
+
+final autoSyncProvider = Provider<void>((ref) {
+  final runner = AutoSyncRunner(ref.watch(syncServiceProvider));
+  runner.start();
+  ref.onDispose(runner.dispose);
+});
