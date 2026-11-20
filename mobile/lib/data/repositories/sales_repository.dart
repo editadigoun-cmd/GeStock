@@ -89,7 +89,7 @@ class SalesRepository {
         'id': saleId, 'business_id': businessId, 'sale_number': number,
         'currency_code': currencyCode, 'subtotal': totals.subtotal, 'discount_total': totals.discountTotal,
         'tax_total': totals.taxTotal, 'total': totals.total, 'amount_paid': amountPaid,
-        'payment_method': paymentMethod, 'payment_status': pendingPayment ? 'pending' : paymentMethod == 'credit' ? (paidAmount >= totals.total ? 'confirmed' : 'partial'),
+        'payment_method': paymentMethod, 'payment_status': pendingPayment ? 'pending' : paymentMethod == 'credit' ? (paidAmount >= totals.total ? 'confirmed' : 'partial') : 'confirmed',
         'status': 'completed', 'sold_at': now, 'sync_state': 'pending',
         'warehouse_id': warehouseId, 'customer_id': customerId, 'created_at': now,
       });
