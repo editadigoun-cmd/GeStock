@@ -98,7 +98,8 @@ stockRoutes.post('/transfers', async c => {
   const [source]=await db.select({id:warehouses.id}).from(warehouses).where(and(eq(warehouses.id,input.from_warehouse_id),eq(warehouses.businessId,input.business_id))).limit(1);
   const [destination]=await db.select({id:warehouses.id}).from(warehouses).where(and(eq(warehouses.id,input.to_warehouse_id),eq(warehouses.businessId,input.business_id))).limit(1);
   if(!source||!destination)return c.json({error:'WAREHOUSE_NOT_FOUND'},404);
-  const now=new Date().toISOString(),number='TR-'+transferId.slice(0,8).toUpperCase();\n  const [actor]=await db.select({id:appUsers.id}).from(appUsers).where(eq(appUsers.authSubject,c.get('userId'))).limit(1);
+  const now=new Date().toISOString(),number='TR-'+transferId.slice(0,8).toUpperCase();
+  const [actor]=await db.select({id:appUsers.id}).from(appUsers).where(eq(appUsers.authSubject,c.get('userId'))).limit(1);
   const parsedItems=[];
   for(const item of input.items){
     const [product]=await db.select({id:products.id,name:products.name}).from(products).where(and(eq(products.id,item.product_id),eq(products.businessId,input.business_id))).limit(1);
@@ -112,7 +113,7 @@ stockRoutes.post('/transfers', async c => {
     ...parsedItems.map(item=>db.insert(stockTransferItems).values({id:crypto.randomUUID(),transferId,productId:item.productId,productNameSnapshot:item.name,quantity:item.quantity})),
     ...parsedItems.flatMap(item=>[
       db.insert(stockMovements).values({id:crypto.randomUUID(),businessId:input.business_id,warehouseId:input.from_warehouse_id,productId:item.productId,movementType:'transfer_out',quantityDelta:-item.quantity,sourceType:'transfer',sourceId:transferId,note:input.note??number,actorUserId:actor?.id??null,occurredAt:now,createdAt:now}),
-      db.insert(stockMovements).values({id:crypto.randomUUID(),businessId:input.business_id,warehouseId:input.to_warehouse_id,productId:item.productId,movementType:'transfer_in',quantityDelta:item.quantity,sourceType:'transfer',sourceId:transferId,note:input.note??number,actorUserId:c.get('userId'),occurredAt:now,createdAt:now}),
+      db.insert(stockMovements).values({id:crypto.randomUUID(),businessId:input.business_id,warehouseId:input.to_warehouse_id,productId:item.productId,movementType:'transfer_in',quantityDelta:item.quantity,sourceType:'transfer',sourceId:transferId,note:input.note??number,actorUserId:actor?.id??null,occurredAt:now,createdAt:now}),
       db.update(stockLevels).set({quantity:sql`${stockLevels.quantity} - ${item.quantity}`,updatedAt:now}).where(and(eq(stockLevels.warehouseId,input.from_warehouse_id),eq(stockLevels.productId,item.productId))),
       db.insert(stockLevels).values({id:crypto.randomUUID(),businessId:input.business_id,warehouseId:input.to_warehouse_id,productId:item.productId,quantity:item.quantity,updatedAt:now}).onConflictDoUpdate({target:[stockLevels.warehouseId,stockLevels.productId],set:{quantity:sql`${stockLevels.quantity} + ${item.quantity}`,updatedAt:now}}),
     ]),
