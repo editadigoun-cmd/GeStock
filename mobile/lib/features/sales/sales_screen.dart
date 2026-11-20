@@ -13,6 +13,7 @@ class SalesScreen extends ConsumerStatefulWidget {
 class _SalesScreenState extends ConsumerState<SalesScreen> {
   final Map<String, double> cart = {};
   String paymentMethod = 'cash';
+  String? selectedCustomerId;
   bool saving = false;
   Future<void> _refresh() async { if (mounted) setState(() {}); }
 
@@ -37,6 +38,8 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
             final totals = _totals(cartProducts);
             return ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 24), children: [
               _header(business['name'].toString(), business['currency_code'].toString()),
+              const SizedBox(height: 14),
+              _customerPicker(businessId),
               const SizedBox(height: 14),
               Row(children: [
                 Expanded(child: Text('Catalogue', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16))),
@@ -74,6 +77,22 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
         );
       },
     ),
+  );
+
+  Widget _customerPicker(String businessId) => FutureBuilder<List<Map<String,Object?>>>(
+    future: ref.read(customerRepositoryProvider).list(businessId),
+    builder: (context,snapshot) {
+      final customers=snapshot.data??[];
+      return Card(child:Padding(padding:const EdgeInsets.symmetric(horizontal:14,vertical:8),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        const Text('Client (facultatif)',style:TextStyle(fontWeight:FontWeight.w800,fontSize:12)),
+        const SizedBox(height:4),
+        DropdownButtonFormField<String?>(value:selectedCustomerId,decoration:const InputDecoration(border:InputBorder.none,hintText:'Vente sans client'),items:[
+          const DropdownMenuItem<String?>(value:null,child:Text('Client anonyme')),
+          ...customers.map((c)=>DropdownMenuItem<String?>(value:c['id'].toString(),child:Text(c['name'].toString(),overflow:TextOverflow.ellipsis))),
+        ],onChanged:(v)=>setState(()=>selectedCustomerId=v)),
+        if(customers.isEmpty) TextButton.icon(onPressed:()=>context.go('/customers'),icon:const Icon(Icons.person_add_alt_1),label:const Text('Ajouter un client')),
+      ])));
+    },
   );
 
   Widget _header(String business, String currency) => Container(
@@ -135,7 +154,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
     if (method == null) return;
     setState(() => saving = true);
     try {
-      await ref.read(salesRepositoryProvider).createSale(businessId: business['id'] as String, currencyCode: business['currency_code']?.toString() ?? 'XOF', quantities: Map.of(cart), paymentMethod: method);
+      await ref.read(salesRepositoryProvider).createSale(businessId: business['id'] as String, currencyCode: business['currency_code']?.toString() ?? 'XOF', quantities: Map.of(cart), paymentMethod: method, customerId: selectedCustomerId);
       cart.clear();
       try { await ref.read(syncServiceProvider).syncPending(); } catch (_) {}
       if (mounted) {
