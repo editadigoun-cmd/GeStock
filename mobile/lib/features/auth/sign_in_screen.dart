@@ -272,8 +272,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         final verificationRequired = await auth.signUp(_name.text.trim(), _email.text.trim(), _password.text);
         if (mounted) {
           if (verificationRequired) {
-            setState(() => _verificationPending = true);
-            _isSignUp = false;
+            setState(() { _verificationPending = true; _isSignUp = false; });
             _showError('Compte créé. Consultez votre e-mail et vérifiez votre adresse avant de continuer.');
           } else {
             context.go('/business/setup');
