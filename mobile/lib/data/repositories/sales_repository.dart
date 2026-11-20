@@ -24,6 +24,7 @@ class SalesRepository {
     required String currencyCode,
     required Map<String, double> quantities,
     required String paymentMethod,
+    String? customerId,
   }) async {
     if (quantities.isEmpty) throw StateError('Le panier est vide.');
     if (!['cash', 'mobile_money', 'card', 'bank_transfer', 'other'].contains(paymentMethod)) {
@@ -33,6 +34,7 @@ class SalesRepository {
     final warehouseRows = await d.query('warehouses', where: 'business_id = ? AND is_default = 1', whereArgs: [businessId], limit: 1);
     if (warehouseRows.isEmpty) throw StateError('Dépôt principal introuvable.');
     final warehouseId = warehouseRows.first['id'] as String;
+    if(customerId!=null){final c=await d.query('customers',where:'id=? AND business_id=?',whereArgs:[customerId,businessId],limit:1);if(c.isEmpty)throw StateError('Client introuvable.');}
     final productRows = <Map<String, Object?>>[];
     for (final entry in quantities.entries) {
       if (!entry.value.isFinite || entry.value <= 0) throw ArgumentError('Quantité invalide.');
@@ -73,6 +75,7 @@ class SalesRepository {
       'sold_at': now,
       'payment_method': paymentMethod,
       'payment_amount': totals.total,
+      'customer_id': customerId,
       'items': payloadItems,
     };
 
@@ -83,7 +86,7 @@ class SalesRepository {
         'tax_total': totals.taxTotal, 'total': totals.total, 'amount_paid': amountPaid,
         'payment_method': paymentMethod, 'payment_status': pendingPayment ? 'pending' : 'confirmed',
         'status': 'completed', 'sold_at': now, 'sync_state': 'pending',
-        'warehouse_id': warehouseId, 'created_at': now,
+        'warehouse_id': warehouseId, 'customer_id': customerId, 'created_at': now,
       });
       for (var i = 0; i < productRows.length; i++) {
         final product = productRows[i];
