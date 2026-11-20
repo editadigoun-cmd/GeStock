@@ -8,6 +8,7 @@ import '../data/repositories/customer_repository.dart';
 import '../data/repositories/supplier_repository.dart';
 import '../data/repositories/purchase_repository.dart';
 import '../data/repositories/expense_repository.dart';
+import '../data/repositories/customer_payment_repository.dart';
 import '../data/services/sync_service.dart';
 
 final databaseProvider = Provider<GeStockDatabase>((ref) {
