@@ -9,7 +9,7 @@ import type { AppEnv } from '../middleware/auth.js';
 export const stockRoutes = new Hono<AppEnv>();
 const movementSchema = z.object({
   business_id: z.string().uuid(), warehouse_id: z.string().uuid(), product_id: z.string().uuid(),
-  movement_type: z.enum(['opening', 'purchase', 'sale', 'return_in', 'return_out', 'adjustment', 'transfer_in', 'transfer_out']),
+  movement_type: z.enum(['opening', 'return_in', 'return_out', 'adjustment']),
   quantity_delta: z.number().finite().refine((v) => v !== 0), unit_cost: z.number().nonnegative().optional(), note: z.string().max(500).optional(),
 });
 stockRoutes.post('/movements', async (c) => {
