@@ -18,6 +18,7 @@ final productRepositoryProvider = Provider((ref) => ProductRepository(ref.watch(
 final salesRepositoryProvider = Provider((ref) => SalesRepository(ref.watch(databaseProvider)));
 final customerRepositoryProvider = Provider((ref) => CustomerRepository(ref.watch(databaseProvider), ref.watch(authRepositoryProvider)));
 final authRepositoryProvider = Provider((ref) => AuthRepository());
+final supplierRepositoryProvider = Provider((ref) => SupplierRepository(ref.watch(databaseProvider), ref.watch(authRepositoryProvider)));
 final syncServiceProvider = Provider((ref) => SyncService(
   database: ref.watch(databaseProvider),
   auth: ref.watch(authRepositoryProvider),
