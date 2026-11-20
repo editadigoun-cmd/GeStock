@@ -46,6 +46,7 @@ class AuthRepository {
     }
     await _saveToken(response.data);
     await _requireSession();
+    return response.data is Map && response.data['data'] is Map && response.data['data']['verification_required'] == true;
   }
 
   Future<void> _saveToken(dynamic data) async {
@@ -111,7 +112,19 @@ class AuthRepository {
     await _removeLegacyCredential();
   }
 
-  Future<void> requestPasswordReset(String email) async {\n    final response=await _dio.post('/auth/forgot-password',data:{'email':email.trim()});\n    if(response.statusCode==null||response.statusCode!>=400)throw Exception(_message(response.data));\n  }\n\n  Future<void> resendVerification() async {\n    final token=await _storage.read(key:_tokenKey);if(token==null||token.isEmpty)throw Exception('Session absente.');\n    final response=await _dio.post('/auth/resend-verification',options:Options(headers:{'Authorization':'Bearer $token'}));\n    if(response.statusCode==null||response.statusCode!>=400)throw Exception(_message(response.data));\n  }\n\n  Future<void> changePassword(String currentPassword, String newPassword) async {
+
+  Future<void> requestPasswordReset(String email) async {
+    final response=await _dio.post('/auth/forgot-password',data:{'email':email.trim()});
+    if(response.statusCode==null||response.statusCode!>=400)throw Exception(_message(response.data));
+  }
+
+  Future<void> resendVerification() async {
+    final token=await _storage.read(key:_tokenKey);
+    if(token==null||token.isEmpty)throw Exception('Session absente.');
+    final response=await _dio.post('/auth/resend-verification',options:Options(headers:{'Authorization':'Bearer $token'}));
+    if(response.statusCode==null||response.statusCode!>=400)throw Exception(_message(response.data));
+  }
+\n  Future<void> changePassword(String currentPassword, String newPassword) async {
     final token = await getAccessToken();
     final response = await _dio.post(
       '/auth/change-password',

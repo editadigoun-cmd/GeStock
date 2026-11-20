@@ -257,7 +257,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: [BoxShadow(color: color, blurRadius: 90, spreadRadius: 25)]),
       );
 
-  Future<void> _forgotPassword() async {\n    final email=_email.text.trim();if(!RegExp(r'^[^\\s@]+@[^\\s@]+\\.[^\\s@]+
+  Future<void> _forgotPassword() async {
+    final email=_email.text.trim();
+    if(!RegExp(r'^[^\\s@]+@[^\\s@]+\\.[^\\s@]+
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
     setState(() => _busy = true);
@@ -293,7 +295,18 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     );
   }
 }
-).hasMatch(email)){_showError('Saisissez votre adresse e-mail.');return;}\n    setState(()=>_busy=true);try{await ref.read(authRepositoryProvider).requestPasswordReset(email);if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Si ce compte existe, un e-mail de réinitialisation sera envoyé.')));}catch(e){_showError(_friendlyError(e));}finally{if(mounted)setState(()=>_busy=false);}\n  }\n  Future<void> _resendVerification() async {\n    setState(()=>_busy=true);try{await ref.read(authRepositoryProvider).resendVerification();if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('E-mail de vérification renvoyé.')));}catch(e){_showError(_friendlyError(e));}finally{if(mounted)setState(()=>_busy=false);}\n  }\n\n  Future<void> _submit() async {
+).hasMatch(email)){_showError('Saisissez votre adresse e-mail.');return;}
+    setState(()=>_busy=true);
+    try{await ref.read(authRepositoryProvider).requestPasswordReset(email);if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Si ce compte existe, un e-mail de réinitialisation sera envoyé.')));}
+    catch(e){_showError(_friendlyError(e));}finally{if(mounted)setState(()=>_busy=false);}
+  }
+  Future<void> _resendVerification() async {
+    setState(()=>_busy=true);
+    try{await ref.read(authRepositoryProvider).resendVerification();if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('E-mail de vérification renvoyé.')));}
+    catch(e){_showError(_friendlyError(e));}finally{if(mounted)setState(()=>_busy=false);}
+  }
+
+  Future<void> _submit() async {
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
     setState(() => _busy = true);
