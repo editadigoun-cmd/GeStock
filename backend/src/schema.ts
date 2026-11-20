@@ -121,7 +121,10 @@ export const saleItems = sqliteTable('sale_items', {
   unitPrice: real('unit_price').notNull(), discountAmount: real('discount_amount').notNull().default(0),
   taxAmount: real('tax_amount').notNull().default(0), lineTotal: real('line_total').notNull(),
 });
-export const customerPayments = sqliteTable('customer_payments', {\n  id: id(), businessId: text('business_id').notNull(), customerId: text('customer_id').notNull(), amount: real('amount').notNull(), paymentMethod: text('payment_method').notNull(), note: text('note'), paidAt: text('paid_at').notNull(), createdBy: text('created_by'), createdAt: timestamp('created_at'),\n}, t => ({ businessCustomerTime: index('customer_payments_business_customer_time_idx').on(t.businessId, t.customerId, t.paidAt) }));\nexport const salePayments = sqliteTable('sale_payments', {
+export const customerPayments = sqliteTable('customer_payments', {
+  id: id(), businessId: text('business_id').notNull(), customerId: text('customer_id').notNull(), amount: real('amount').notNull(), paymentMethod: text('payment_method').notNull(), note: text('note'), paidAt: text('paid_at').notNull(), createdBy: text('created_by'), createdAt: timestamp('created_at'),
+}, t => ({ businessCustomerTime: index('customer_payments_business_customer_time_idx').on(t.businessId, t.customerId, t.paidAt) }));
+export const salePayments = sqliteTable('sale_payments', {
   id: id(), saleId: text('sale_id').notNull(), paymentMethod: text('payment_method').notNull(),
   amount: real('amount').notNull(), status: text('status').notNull().default('confirmed'),
   providerReference: text('provider_reference'), paidAt: text('paid_at'), createdAt: timestamp('created_at'),
