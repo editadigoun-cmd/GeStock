@@ -5,8 +5,8 @@ import 'package:uuid/uuid.dart';
 import '../local/gestock_database.dart';
 
 class CashRepository {
-  CashRepository(this.db);
-  final GeStockDatabase db;final _uuid=const Uuid();
+  CashRepository(this.db,this.auth,{Dio? dio}):_dio=dio??Dio(BaseOptions(baseUrl:const String.fromEnvironment('GESTOCK_API_URL',defaultValue:'https://gestock-api.ccds22431.workers.dev'),headers:{'Content-Type':'application/json'}));
+  final GeStockDatabase db;final AuthRepository auth;final Dio _dio;final _uuid=const Uuid();
 
   Future<void> pullCloud(String businessId)async{
     final token=await auth.getAccessToken();final response=await _dio.get('/v1/cash/sessions',queryParameters:{'business_id':businessId},options:Options(headers:{'Authorization':'Bearer $token'}));
