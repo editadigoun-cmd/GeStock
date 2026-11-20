@@ -34,6 +34,8 @@ class CustomerRepository {
         if(((pendingSale.first['count'] as num?)?.toInt()??0)>0) continue;
         final pendingPayment=await txn.rawQuery("SELECT COUNT(*) AS count FROM outbox WHERE entity_type='customer_payment' AND status IN ('queued','failed','conflict') AND payload LIKE ?", ['%\"customer_id\":\"$customerId\"%']);
         if(((pendingPayment.first['count'] as num?)?.toInt()??0)>0) continue;
+        final pendingReturn=await txn.rawQuery("SELECT COUNT(*) AS count FROM outbox WHERE entity_type='sale_return' AND status IN ('queued','failed','conflict') AND entity_id IN (SELECT sr.id FROM sale_returns sr JOIN sales s ON s.id=sr.sale_id WHERE s.customer_id=?)", [customerId]);
+        if(((pendingReturn.first['count'] as num?)?.toInt()??0)>0) continue;
         final local=await txn.query('customers',where:'id=?',whereArgs:[customerId],limit:1);
         final values={'id':customerId,'business_id':businessId,'name':row['name']??'','phone':row['phone'],'email':row['email'],'address':row['address'],'notes':row['notes'],'balance_due':row['balance_due']??0,'created_at':row['created_at']??now,'updated_at':row['updated_at']??now,'sync_state':'synced'};
         if(local.isEmpty) await txn.insert('customers',values); else await txn.update('customers',values,where:'id=?',whereArgs:[customerId]);
