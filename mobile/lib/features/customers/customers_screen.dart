@@ -7,6 +7,7 @@ class CustomersScreen extends ConsumerStatefulWidget { const CustomersScreen({su
 class _CustomersScreenState extends ConsumerState<CustomersScreen> {
   String query='';
   bool busy=false;
+  final Set<String> pulledBusinesses={};
   @override Widget build(BuildContext context)=>Scaffold(
     appBar:AppBar(title:const Text('Clients')),
     body:FutureBuilder<Map<String,Object?>?>(
@@ -15,6 +16,7 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
         if(businessSnapshot.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());
         final business=businessSnapshot.data;if(business==null)return const Center(child:Text('Créez d’abord une entreprise.'));
         final businessId=business['id'] as String;
+        if(!pulledBusinesses.contains(businessId)){pulledBusinesses.add(businessId);ref.read(customerRepositoryProvider).pullCloud(businessId).then((_) {if(mounted)setState((){});}).catchError((_){});}
         return Column(children:[
           Padding(padding:const EdgeInsets.fromLTRB(16,10,16,8),child:TextField(decoration:const InputDecoration(prefixIcon:Icon(Icons.search),hintText:'Rechercher nom, téléphone, email'),onChanged:(v)=>setState(()=>query=v))),
           Expanded(child:FutureBuilder<List<Map<String,Object?>>>(
