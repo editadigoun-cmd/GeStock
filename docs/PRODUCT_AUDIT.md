@@ -31,7 +31,7 @@ Audit effectué sur `main` le 20 novembre 2026 à partir de README, docs/IMPLEME
 | Ventes / POS | Présent, workflow incomplet | Parcours complet, panier, paiement, validation |
 | Paiements multiples | Schema ventes/paiements | UI et tests à vérifier |
 | Retours / remboursements | Manquant | Implémenter |
-| Crédit / dette client | Manquant | Implémenter |
+| Crédit / dette client | En cours d'implémentation | Vente à crédit avec acompte ou paiement différé, client obligatoire, solde dû local/cloud et affichage dans la fiche client; paiement/recouvrement ultérieur et CI à confirmer |
 | Sessions de caisse | Incomplet | Ouverture, clôture, rapprochement |
 | Dépenses | Développé, CI passée | Enregistrement hors ligne, catégories, API cloud et sync; déploiement API et tests appareil à confirmer |
 | Reçus / impression | Manquant | Implémenter |
