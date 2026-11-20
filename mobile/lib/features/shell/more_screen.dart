@@ -5,6 +5,7 @@ class MoreScreen extends StatelessWidget {
  const MoreScreen({super.key});
  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('Plus de fonctionnalités')),body:ListView(padding:const EdgeInsets.all(16),children:[
   _item(context,Icons.storefront_outlined,'Entreprise et magasins','Gestion des entreprises','/businesses'),
+  _item(context,Icons.people_alt_outlined,'Employés','Ajouter, gérer les rôles et accès','/employees'),
   _item(context,Icons.local_shipping_outlined,'Fournisseurs','Contacts et fournisseurs','/suppliers'),
   _item(context,Icons.shopping_bag_outlined,'Achats & réceptions','Entrées de stock via achats','/purchases'),
   _item(context,Icons.receipt_long_outlined,'Dépenses','Enregistrer et suivre les dépenses','/expenses'),
