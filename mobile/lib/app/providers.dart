@@ -15,7 +15,7 @@ final databaseProvider = Provider<GeStockDatabase>((ref) {
 final businessRepositoryProvider = Provider((ref) => BusinessRepository(ref.watch(databaseProvider)));
 final productRepositoryProvider = Provider((ref) => ProductRepository(ref.watch(databaseProvider)));
 final salesRepositoryProvider = Provider((ref) => SalesRepository(ref.watch(databaseProvider)));
-final customerRepositoryProvider = Provider((ref) => CustomerRepository(ref.watch(databaseProvider)));
+final customerRepositoryProvider = Provider((ref) => CustomerRepository(ref.watch(databaseProvider), ref.watch(authRepositoryProvider)));
 final authRepositoryProvider = Provider((ref) => AuthRepository());
 final syncServiceProvider = Provider((ref) => SyncService(
   database: ref.watch(databaseProvider),
