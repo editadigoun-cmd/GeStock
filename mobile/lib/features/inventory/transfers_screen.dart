@@ -43,7 +43,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
     super.dispose();
   }
 
-  Future<String> _token() async => await ref.read(authRepositoryProvider).getAccessToken() ?? '';
+  Future<String> _token() async => ref.read(authRepositoryProvider).getAccessToken();
 
   Future<void> _load(String id) async {
     setState(() { loading = true; error = null; businessId = id; });
