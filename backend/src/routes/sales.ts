@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { and, desc, eq } from 'drizzle-orm';
 import { db } from '../services/db.js';
-import { appUsers, sales, saleItems, salePayments } from '../schema.js';
+import { appUsers, sales, saleItems, salePayments, saleReturns, saleReturnItems } from '../schema.js';
 import { hasBusinessAccess } from '../services/access.js';
 import { createSaleTransaction, saleInputSchema } from '../services/sales.js';
 import type { AppEnv } from '../middleware/auth.js';
@@ -14,6 +14,17 @@ salesRoutes.get('/', async (c) => {
   if (!await hasBusinessAccess(c.get('userId'), businessId)) return c.json({ error: 'FORBIDDEN' }, 403);
   const rows = await db.select().from(sales).where(eq(sales.businessId, businessId)).orderBy(desc(sales.soldAt)).limit(100);
   return c.json({ data: rows });
+});
+
+salesRoutes.get('/:id/returns', async (c) => {
+  const businessId=c.req.query('business_id');const saleId=c.req.param('id');
+  if(!businessId)return c.json({error:'BUSINESS_REQUIRED'},400);
+  if(!await hasBusinessAccess(c.get('userId'),businessId))return c.json({error:'FORBIDDEN'},403);
+  const [sale]=await db.select({id:sales.id}).from(sales).where(and(eq(sales.id,saleId),eq(sales.businessId,businessId))).limit(1);
+  if(!sale)return c.json({error:'SALE_NOT_FOUND'},404);
+  const rows=await db.select().from(saleReturns).where(and(eq(saleReturns.saleId,saleId),eq(saleReturns.businessId,businessId))).orderBy(desc(saleReturns.returnedAt));
+  const data=await Promise.all(rows.map(async r=>({ ...r, items:await db.select().from(saleReturnItems).where(eq(saleReturnItems.returnId,r.id)) })));
+  return c.json({data});
 });
 
 salesRoutes.get('/:id', async (c) => {
