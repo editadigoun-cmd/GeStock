@@ -112,7 +112,7 @@ class SyncService {
             } else if (type == 'sale_return') {
               await txn.update('sale_returns', {'sync_state': 'synced'}, where: 'id = ?', whereArgs: [entityId]);
               await txn.update('stock_movements', {'sync_state': 'synced'}, where: 'source_type = ? AND source_id = ?', whereArgs: ['sale_return', entityId]);
-              await txn.update('products', {'sync_state': 'synced'}, where: 'business_id = ? AND id IN (SELECT product_id FROM sale_return_items WHERE return_id = ?)', whereArgs: [businessId, entityId]);
+              await txn.update('products', {'sync_state': 'synced'}, where: 'id IN (SELECT product_id FROM sale_return_items WHERE return_id = ?)', whereArgs: [entityId]);
             } else if (type == 'sale') {
               await txn.update('sales', {'sync_state': 'synced'}, where: 'id = ?', whereArgs: [entityId]);
               await txn.update('stock_movements', {'sync_state': 'synced'}, where: 'source_type = ? AND source_id = ?', whereArgs: ['sale', entityId]);
