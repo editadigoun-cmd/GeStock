@@ -13,6 +13,6 @@ cashRoutes.get('/sessions',async c=>{
 });
 cashRoutes.get('/registers',async c=>{
  const businessId=c.req.query('business_id');if(!businessId)return c.json({error:'BUSINESS_REQUIRED'},400);
- if(!await hasBusinessAccess(c.get('userId'),businessId))return c.json({error:'FORBIDDEN'},403);
+ if(!await hasBusinessPermission(c.get('userId'),businessId,'cash.read'))return c.json({error:'FORBIDDEN'},403);
  return c.json({data:await db.select().from(cashRegisters).where(and(eq(cashRegisters.businessId,businessId),eq(cashRegisters.isActive,1)))});
 });
