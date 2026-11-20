@@ -16,7 +16,7 @@ Audit effectué sur `main` le 20 novembre 2026 à partir de README, docs/IMPLEME
 |---|---|---|
 | Inscription / connexion | Présent, API testée | Test physique sur appareil |
 | Session, déconnexion, changement de mot de passe | API testée | UX mobile et tests appareil |
-| Multi-entreprises / membres | Structure backend | Parcours mobile, permissions |
+| Multi-entreprises / membres | Développé (employés) | Liste, ajout par e-mail d'un compte existant, rôles gestionnaire/caissier/employé, activation/désactivation; parcours d'invitation e-mail et permissions détaillées à compléter |
 | Création entreprise | Présent | Test réel |
 | Catalogue produits | Partiel | Vérifier CRUD mobile et synchronisation |
 | Catégories | Structure prévue | Vérifier écran et CRUD |
