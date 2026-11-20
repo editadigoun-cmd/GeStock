@@ -191,7 +191,7 @@ adminRoutes.get('/users', async (c) => {
     id: appUsers.id,
     email: appUsers.email,
     display_name: appUsers.displayName,
-    created_at: appUsers.createdAt,
+    created_at: appUsers.createdAt, status: appUsers.status,
     active_businesses: sql<number>`(SELECT COUNT(*) FROM business_memberships bm WHERE bm.user_id = app_users.id AND bm.status = 'active')`,
     organizations: sql<number>`(SELECT COUNT(*) FROM organization_memberships om WHERE om.user_id = app_users.id AND om.status = 'active')`,
     devices: sql<number>`(SELECT COUNT(*) FROM sync_devices sd WHERE sd.user_id = app_users.id)`,

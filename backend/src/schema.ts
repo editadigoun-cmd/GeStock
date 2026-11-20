@@ -7,7 +7,7 @@ const timestamp = (name: string) => text(name).notNull().default(sql`CURRENT_TIM
 
 export const appUsers = sqliteTable('app_users', {
   id: id(), authSubject: text('auth_subject').unique(), email: text('email'), displayName: text('display_name'),
-  passwordHash: text('password_hash'), emailVerified: integer('email_verified').notNull().default(0),
+  passwordHash: text('password_hash'), emailVerified: integer('email_verified').notNull().default(0), status: text('status').notNull().default('active'),
   phone: text('phone'), preferredLocale: text('preferred_locale').notNull().default('fr'),
   createdAt: text('created_at'), updatedAt: text('updated_at'),
 });
