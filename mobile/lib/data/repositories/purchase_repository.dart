@@ -60,7 +60,7 @@ class PurchaseRepository {
     final number='ACH-${now.replaceAll(RegExp(r'[-:T.]'),'').substring(0,14)}-${id.substring(0,4).toUpperCase()}';
     final payload={'id':id,'business_id':businessId,'supplier_id':supplierId,'warehouse_id':warehouseId,'purchase_number':number,'status':'received','currency_code':currencyCode,'total':(total*100).round()/100,'ordered_at':now,'received_at':now,'created_at':now,'items':normalized};
     await d.transaction((txn) async {
-      await txn.insert('purchases',{...payload,'items':null,'sync_state':'pending'});
+      await txn.insert('purchases',{'id':id,'business_id':businessId,'supplier_id':supplierId,'warehouse_id':warehouseId,'purchase_number':number,'status':'received','currency_code':currencyCode,'total':(total*100).round()/100,'ordered_at':now,'received_at':now,'created_at':now,'sync_state':'pending'});
       for(final item in normalized) {
         await txn.insert('purchase_items',{'id':item['id'],'purchase_id':id,'product_id':item['product_id'],'product_name_snapshot':item['product_name_snapshot'],'quantity':item['quantity'],'unit_cost':item['unit_cost'],'line_total':item['line_total']});
         final product=(await txn.query('products',where:'id=?',whereArgs:[item['product_id']],limit:1)).first;
