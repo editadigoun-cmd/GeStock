@@ -5,6 +5,7 @@ import '../data/repositories/business_repository.dart';
 import '../data/repositories/product_repository.dart';
 import '../data/repositories/sales_repository.dart';
 import '../data/repositories/customer_repository.dart';
+import '../data/repositories/supplier_repository.dart';
 import '../data/services/sync_service.dart';
 
 final databaseProvider = Provider<GeStockDatabase>((ref) {
