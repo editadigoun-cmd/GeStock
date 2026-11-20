@@ -2,7 +2,7 @@
 
 Audit effectué sur `main` le 20 novembre 2026 à partir de README, docs/IMPLEMENTATION_STATUS.md, docs/ARCHITECTURE.md, backend/src/schema.ts et mobile/lib/data/services/sync_service.dart.
 
-> Cet inventaire est un état initial. « Présent en base/backend » ne signifie pas que l'écran mobile existe ni que le parcours est fonctionnel. Les tests sur appareil restent nécessaires.
+> Cet inventaire est évolutif. « Présent en base/backend » ne signifie pas que l'écran mobile existe ni que le parcours est fonctionnel. Les tests sur appareil restent nécessaires. Progression du 20 novembre 2026 : module Clients en cours d'implémentation sur main (migration locale, CRUD hors ligne, écran, API cloud de lecture, sync push et association facultative aux ventes). CI et tests appareil à confirmer. Aucun nouvel APK de distribution ne doit être publié avant la fin de l'audit et des tests.
 
 ## Statuts
 
@@ -25,7 +25,7 @@ Audit effectué sur `main` le 20 novembre 2026 à partir de README, docs/IMPLEME
 | Inventaire | À vérifier / incomplet | Comptage, écarts, validation |
 | Entrepôts / magasins | Structure backend | Écrans et workflow |
 | Transferts entre magasins | Incomplet | Implémenter |
-| Clients | Backend/schema existe; UI mobile absente | CRUD local/cloud, association facultative à une vente |
+| Clients | En cours d'implémentation | CRUD mobile hors ligne, API de lecture cloud, sync push, sélection facultative en POS; CI et tests appareil à confirmer |
 | Fournisseurs | Backend/schema existe | UI et parcours à vérifier |
 | Achats | Incomplet | Commande, réception, mise à jour du stock |
 | Ventes / POS | Présent, workflow incomplet | Parcours complet, panier, paiement, validation |
