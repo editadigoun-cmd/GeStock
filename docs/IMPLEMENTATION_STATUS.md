@@ -1,35 +1,39 @@
-# GeStock implementation status
+# GeStock — implementation and release status
 
-## Latest verified state
-- Current main: `6dbc100950952c275076e509033f551efdfe0afc`; GitHub branch list contains only `main`.
-- Quality run `44638384366` passed on the current main commit: Flutter analysis/tests, backend typecheck/tests, D1 migrations, API deployment/health and deployed auth smoke test.
-- Admin deployment run `44638031895` passed on `c5fbc27`: Vinext compatibility, Cloudflare build, high-severity dependency audit, deployment and Access edge redirect verification.
-- Current Cloudflare Workers: `gestock-api` and `gestock-admin`; no GeStock auth-proxy Worker remains.
-- API Worker deployed from current main at `2026-11-19T23:33:27Z`; Admin Worker source remains unchanged since its successful deployment at `2026-11-19T23:30:14Z`.
-- Cloudflare Access app `GeStock Admin Console` protects `gestock-admin.ccds22431.workers.dev`, allows `editadigoun@gmail.com`, and has a 24-hour session. CI's anonymous probe returned HTTP 302 to the Cloudflare Access login domain.
-- Live D1 inspection: `gestock-db` has 29 SQLite tables total (26 application tables plus D1/system tables); migration records 0001–0005 exist; `app_users`, `businesses`, `products`, and `sales` are all empty. Auth tables `auth_sessions` and `auth_rate_limits` exist.
-- Cloudflare-only code/workflows search found no Vercel or Neon references. The legacy auth proxy Worker and obsolete Admin secret were removed.
-- **Residual GitHub metadata:** the repository's Homepage setting still points to an old Vercel URL (`gestock-admin.vercel.app`). It is not used by code or deployment. The available GitHub integration can write repository files but cannot update repository settings; the Homepage field must be cleared in GitHub repository Settings. Do not use that URL.
-- Android release build run `44625717701` passed from mobile commit `c47aa989`; the mobile source has not changed since. The release APK is `GeStock.apk`, 54,617,511 bytes, with release SHA-256 `e7fc53a2baf4f335efbfd7aeb51d5158c40e4090bbb9a39b984a74a2bc62b704`. GitHub release metadata reports the same digest, and CI verified the downloaded APK against its checksum.
+## Current source
+- Main branch only; latest commit: `53d5e3dc85808653a0cc242f34934337c96c1bca`.
+- Hosting: Cloudflare Workers + D1 + Cloudflare Access. Vercel and Neon are not used by the application or workflows.
+- API Worker: `gestock-api`; admin Worker: `gestock-admin`.
+- Cloudflare Access protects the admin console and restricts it to the configured administrator.
+- CI is running for this source snapshot; do not call it production-ready until the latest run completes.
 
-## Cloudflare-native auth verified
-- Registration/login, `/auth/me`, password change, new-password login, rejection of old password, logout revocation and rejection of revoked session were exercised against the deployed API in CI.
-- Opaque 256-bit session tokens; only SHA-256 token digests stored; 30-day expiry; sessions revocable.
-- PBKDF2-SHA-256 at 100,000 iterations with per-password salt (Cloudflare Workers limit).
-- Login throttling: 5 attempts/15 minutes per email+IP; registration throttling: 3/hour per IP; stale rate-limit records are cleaned after 24 hours.
-- Admin API requires Cloudflare Access JWT, issuer/audience validation and allowlisted email.
+## Added in the current development pass
+- Platform admin APIs and console controls for user/business suspension, settings, subscriptions, ad placements, support tickets and platform audit logs.
+- Account suspension revokes active sessions; suspended businesses are now denied by backend business access checks.
+- Email verification, resend verification, password-reset token flow, password-reset page and mobile recovery controls. Verification is enforced only when Resend is configured; email secrets are required for delivery.
+- Mobile support request submission and request history.
+- Offline synchronization status page, queued/failed/conflict counts, and retry action.
+- Physical stock count workflow; count variances are recorded as stock adjustments and queued for sync.
+- Automatic Android APK release build is enabled for main updates. Latest build is in progress.
 
-## Dependency security
-- Backend audit: 0 vulnerabilities after upgrading Drizzle ORM to 0.45.4 and Zod to 4.6.7.
-- Admin high-severity audit gate passes after upgrading Next.js to 16.4.6, overriding PostCSS to 8.5.23, and applying compatible dependency fixes. Five moderate findings remain in the build tool chain (including fflate ZIP64 parsing); forcing a breaking Vinext dependency change was not applied.
+## Verified before the current snapshot
+- Previous main CI passed Flutter analysis/tests, backend typecheck/tests, D1 migrations, API health and auth smoke tests.
+- Android APK signature and SHA-256 checks passed for an earlier release.
+- Cloudflare Access anonymous request was verified to redirect to login.
+- Backend dependency audit had zero vulnerabilities; admin audit had five moderate findings in the build toolchain and no high-severity findings at the last audit.
 
-## Remaining release blockers
-1. The previous external identity data was not audited/exported. D1 has no users at the latest inspection; any old identity data remains untouched and disconnected. Preserve it until export/retention is verified; no legacy provider code or proxy is active.
-2. Admin dashboard remains read-only. User/role CRUD, invitations, audit UI, full settings and recovery workflows remain incomplete.
-3. Physical-device testing is still required for registration, login, password change, logout, business setup, offline/online sync and conflict recovery.
-4. Email verification and email-delivered password recovery are not implemented.
-5. Mobile features still incomplete: provider payments, cash sessions, returns/refunds, purchasing/receiving, credit, receipts/printing, warehouse transfers and conflict-resolution UI.
-6. Production Play signing/AAB, iOS build and store publication have not been completed.
-7. Clear the stale GitHub Homepage setting as noted above.
+## Remaining items / external setup
+1. **Email delivery:** configure `RESEND_API_KEY`, `EMAIL_FROM`, and `APP_BASE_URL` as Worker secrets/vars, then test verification, invitation, and recovery emails with a real address.
+2. **Ads:** Ad placements are configurable in admin, but the mobile Ad SDK and valid AdMob app/unit IDs are not integrated/configured.
+3. **Subscriptions/payments:** admin can assign plans manually; purchase flow, provider verification, app-store billing and entitlements enforcement remain incomplete.
+4. **Role permissions:** employee membership/roles exist, but permission enforcement across every API workflow requires a full role-by-role audit.
+5. **Inventory:** physical count is implemented; warehouse transfer workflow remains to be implemented and tested.
+6. **Receipts/printing:** receipt formatting and device printing remain incomplete.
+7. **Mobile validation:** physical Android testing is required for registration, email verification, password recovery, offline/online sync, stock count, sales, returns, cash sessions, purchasing and support.
+8. **iOS:** build, signing and App Store publication have not been completed.
+9. **Play Store:** Play Console setup, production signing/AAB, listing, policy disclosures and publication remain external release tasks.
+10. **Legacy identity:** the previous identity-provider data was not audited/exported; it remains untouched and disconnected.
+11. **GitHub metadata:** repository Homepage still contains an obsolete Vercel URL. Clear it in repository Settings; the GitHub connector available here cannot edit repository metadata.
 
-See [architecture](ARCHITECTURE.md) and [migration/rollback](AUTH_MIGRATION_ROLLBACK.md).
+## Release rule
+Only mark GeStock production-ready after the latest CI and Android build pass, the email/ads/payment secrets are configured where needed, and physical-device validation is complete.
