@@ -12,7 +12,10 @@ typedef ConnectivityCheck = Future<List<ConnectivityResult>> Function();
 class SyncService {
   SyncService({required this.database, required this.auth, Dio? dio, FlutterSecureStorage? secureStorage, ConnectivityCheck? connectivityCheck})
       : _dio = dio ?? Dio(BaseOptions(
-          baseUrl: const String.fromEnvironment('GESTOCK_API_URL'),
+          baseUrl: const String.fromEnvironment(
+            'GESTOCK_API_URL',
+            defaultValue: 'https://gestock-api.ccds22431.workers.dev',
+          ),
           connectTimeout: const Duration(seconds: 12),
           receiveTimeout: const Duration(seconds: 20),
           headers: {'Content-Type': 'application/json'},
