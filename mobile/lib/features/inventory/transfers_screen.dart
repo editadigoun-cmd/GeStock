@@ -27,7 +27,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
   List<Map<String, Object?>> warehouses = [];
   List<Map<String, Object?>> levels = [];
   List<Map<String, Object?>> products = [];
-  List<Map<String, Object?>> history = [];
+  List<Map<String, Object?>> history = [];\n  late Future<Map<String, Object?>?> businessFuture;\n\n  @override\n  void initState() {\n    super.initState();\n    businessFuture = ref.read(businessRepositoryProvider).active();\n  }
 
   @override
   void dispose() {
@@ -39,7 +39,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
   Future<String> _token() async => await ref.read(authRepositoryProvider).getAccessToken() ?? '';
 
   Future<void> _load(String id) async {
-    setState(() { loading = true; error = null; });
+    setState(() { loading = true; error = null; businessId = id; });
     try {
       final token = await _token();
       final options = Options(headers: {'Authorization': 'Bearer ' + token});
@@ -202,7 +202,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
         ],
       ),
       body: FutureBuilder<Map<String, Object?>?>(
-        future: ref.read(businessRepositoryProvider).active(),
+        future: businessFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
           final business = snapshot.data;
