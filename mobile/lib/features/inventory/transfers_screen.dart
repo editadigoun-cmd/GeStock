@@ -83,7 +83,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen>{
     Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
       const Text('Origine et destination',style:TextStyle(fontWeight:FontWeight.w900)),
       const SizedBox(height:8),
-      DropdownButtonFormField<String>(value:sourceId,decoration:const InputDecoration(labelText:'Dépôt source'),items:warehouses.map((w)=>DropdownMenuItem(value:w['id'].toString(),child:Text(w['name'].toString()))).toList(),onChanged:(v){setState(()=>sourceId=v);if(destinationId==v)setState(()=>destinationId=null;}),
+      DropdownButtonFormField<String>(value:sourceId,decoration:const InputDecoration(labelText:'Dépôt source'),items:warehouses.map((w)=>DropdownMenuItem(value:w['id'].toString(),child:Text(w['name'].toString()))).toList(),onChanged:(v){setState(()=>sourceId=v);if(destinationId==v)setState(()=>destinationId=null);}),
       ),
       const SizedBox(height:8),
       DropdownButtonFormField<String>(value:destinationId,decoration:const InputDecoration(labelText:'Dépôt destination'),items:warehouses.where((w)=>w['id']!=sourceId).map((w)=>DropdownMenuItem(value:w['id'].toString(),child:Text(w['name'].toString()))).toList(),onChanged:(v)=>setState(()=>destinationId=v)),
