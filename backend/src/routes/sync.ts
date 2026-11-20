@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../services/db.js';
-import { appUsers, businesses, businessMemberships, organizationMemberships, organizations, products, customers, suppliers, stockMovements, stockLevels, syncDevices, syncOperations, warehouses } from '../schema.js';
+import { appUsers, businesses, businessMemberships, organizationMemberships, organizations, products, customers, suppliers, purchases, purchaseItems, stockMovements, stockLevels, syncDevices, syncOperations, warehouses } from '../schema.js';
 import { saleInputSchema, createSaleTransaction } from '../services/sales.js';
 import type { AppEnv } from '../middleware/auth.js';
 
@@ -39,7 +39,7 @@ syncRoutes.post('/devices/register', async (c) => {
 const operationSchema = z.object({
   id: z.string().uuid(),
   business_id: z.string().uuid(),
-  entity_type: z.enum(['business', 'product', 'customer', 'supplier', 'stock_movement', 'sale']),
+  entity_type: z.enum(['business', 'product', 'customer', 'supplier', 'purchase', 'stock_movement', 'sale']),
   entity_id: z.string().uuid(),
   operation: z.string().min(1).max(40),
   payload: z.record(z.string(), z.unknown()),
@@ -119,6 +119,60 @@ async function applyOperation(authSubject: string, deviceId: string, op: z.infer
     const result = { id: op.entity_id, synced: true };
     const outcome = await createSaleTransaction(user.id, parsedSale.data, operationRecord(deviceId, op, result));
     return { status: 'applied', result: { ...result, duplicate: outcome.duplicate }, duplicate: outcome.duplicate };
+  }
+
+  if (op.entity_type === 'purchase') {
+    const p = op.payload;
+    const purchaseId = String(p.id ?? op.entity_id);
+    const supplierId = p.supplier_id ? String(p.supplier_id) : null;
+    const warehouseId = String(p.warehouse_id ?? '');
+    const purchaseNumber = String(p.purchase_number ?? '').trim();
+    const currencyCode = String(p.currency_code ?? '');
+    const status = String(p.status ?? 'received');
+    const items = Array.isArray(p.items) ? p.items : [];
+    if (purchaseId !== op.entity_id || String(p.business_id ?? op.business_id) !== op.business_id ||
+        !purchaseNumber || !/^[A-Z]{3}$/.test(currencyCode) || status !== 'received' || items.length < 1 || items.length > 100) {
+      throw new Error('INVALID_PURCHASE_PAYLOAD');
+    }
+    const [existing] = await db.select({id:purchases.id,businessId:purchases.businessId}).from(purchases).where(eq(purchases.id,purchaseId)).limit(1);
+    if (existing) {
+      if (existing.businessId !== op.business_id) throw new Error('PURCHASE_BUSINESS_MISMATCH');
+      const result = {id:purchaseId,synced:true,duplicate:true};
+      await db.insert(syncOperations).values(operationRecord(deviceId,op,result));
+      return {status:'applied',result,duplicate:true};
+    }
+    const [warehouse] = await db.select({id:warehouses.id}).from(warehouses).where(and(eq(warehouses.id,warehouseId),eq(warehouses.businessId,op.business_id))).limit(1);
+    if (!warehouse) throw new Error('WAREHOUSE_NOT_FOUND');
+    if (supplierId) {
+      const [supplier] = await db.select({id:suppliers.id}).from(suppliers).where(and(eq(suppliers.id,supplierId),eq(suppliers.businessId,op.business_id))).limit(1);
+      if (!supplier) throw new Error('SUPPLIER_NOT_FOUND');
+    }
+    let total = 0;
+    const parsedItems = [];
+    for (const raw of items) {
+      const item = raw as Record<string,unknown>;
+      const productId = String(item.product_id ?? '');
+      const quantity = Number(item.quantity);
+      const unitCost = Number(item.unit_cost);
+      if (!productId || !Number.isFinite(quantity) || quantity <= 0 || !Number.isFinite(unitCost) || unitCost < 0) throw new Error('INVALID_PURCHASE_ITEM');
+      const [product] = await db.select({id:products.id,name:products.name}).from(products).where(and(eq(products.id,productId),eq(products.businessId,op.business_id))).limit(1);
+      if (!product) throw new Error('PRODUCT_NOT_FOUND');
+      const lineTotal = Math.round(quantity * unitCost * 100) / 100;
+      total += lineTotal;
+      parsedItems.push({id:String(item.id ?? crypto.randomUUID()),productId,productName:String(item.product_name_snapshot ?? product.name),quantity,unitCost,lineTotal});
+    }
+    total = Math.round(total * 100) / 100;
+    const now = new Date().toISOString();
+    const result = {id:purchaseId,synced:true};
+    const queries:any[] = [
+      db.insert(purchases).values({id:purchaseId,businessId:op.business_id,supplierId,warehouseId,purchaseNumber,status:'received',currencyCode,total,orderedAt:p.ordered_at?String(p.ordered_at):now,receivedAt:p.received_at?String(p.received_at):now,createdAt:p.created_at?String(p.created_at):now}),
+    ...parsedItems.map(i=>db.insert(purchaseItems).values({id:i.id,purchaseId,productId:i.productId,productNameSnapshot:i.productName,quantity:i.quantity,unitCost:i.unitCost,lineTotal:i.lineTotal})),
+    ...parsedItems.map(i=>db.insert(stockMovements).values({id:crypto.randomUUID(),businessId:op.business_id,warehouseId,productId:i.productId,movementType:'purchase',quantityDelta:i.quantity,unitCost:i.unitCost,sourceType:'purchase',sourceId:purchaseId,note:'Réception '+purchaseNumber,actorUserId:user.id,occurredAt:now,createdAt:now})),
+    ...parsedItems.map(i=>db.insert(stockLevels).values({id:crypto.randomUUID(),businessId:op.business_id,warehouseId,productId:i.productId,quantity:i.quantity,updatedAt:now}).onConflictDoUpdate({target:[stockLevels.warehouseId,stockLevels.productId],set:{quantity:sql`${stockLevels.quantity} + ${i.quantity}`,updatedAt:now}})),
+    db.insert(syncOperations).values(operationRecord(deviceId,op,result)),
+  ];
+  await db.batch(queries);
+  return {status:'applied',result,duplicate:false};
   }
 
   if (op.entity_type === 'customer') {
