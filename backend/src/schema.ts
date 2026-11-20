@@ -79,6 +79,19 @@ export const stockMovements = sqliteTable('stock_movements', {
   businessTime: index('idx_stock_movements_business_time').on(t.businessId, t.occurredAt),
   productIdx: index('idx_stock_movements_product').on(t.productId),
 }));
+export const stockTransfers = sqliteTable('stock_transfers', {
+  id: id(), businessId: text('business_id').notNull(), fromWarehouseId: text('from_warehouse_id').notNull(),
+  toWarehouseId: text('to_warehouse_id').notNull(), transferNumber: text('transfer_number').notNull(),
+  status: text('status').notNull().default('completed'), note: text('note'), createdBy: text('created_by'),
+  transferredAt: text('transferred_at').notNull(), createdAt: timestamp('created_at'),
+}, t => ({
+  businessNumber: uniqueIndex('stock_transfers_business_number_uq').on(t.businessId,t.transferNumber),
+  businessTime: index('stock_transfers_business_time_idx').on(t.businessId,t.transferredAt),
+}));
+export const stockTransferItems = sqliteTable('stock_transfer_items', {
+  id: id(), transferId: text('transfer_id').notNull(), productId: text('product_id').notNull(),
+  productNameSnapshot: text('product_name_snapshot').notNull(), quantity: real('quantity').notNull(),
+}, t => ({ transferIdx: index('stock_transfer_items_transfer_idx').on(t.transferId) }));
 export const customers = sqliteTable('customers', {
   id: id(), businessId: text('business_id').notNull(), name: text('name').notNull(),
   phone: text('phone'), email: text('email'), address: text('address'), notes: text('notes'),
