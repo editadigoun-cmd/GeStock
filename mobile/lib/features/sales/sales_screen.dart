@@ -141,20 +141,54 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
   );
 
   Future<void> _checkout(Map<String, Object?> business, dynamic totals) async {
-    final method = await showModalBottomSheet<String>(context: context, builder: (context) => SafeArea(child: Padding(
-      padding: const EdgeInsets.all(20), child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Mode de paiement', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 8), Text('Total : ${_money(totals.total)}', style: const TextStyle(color: GeStockColors.deepEmerald, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 12),
-        ListTile(leading: const Icon(Icons.payments_outlined), title: const Text('Espèces'), subtitle: const Text('Paiement enregistré'), onTap: () => Navigator.pop(context, 'cash')),
-        ListTile(leading: const Icon(Icons.phone_android_rounded), title: const Text('Mobile Money'), subtitle: const Text('En attente de confirmation du prestataire'), onTap: () => Navigator.pop(context, 'mobile_money')),
-        ListTile(leading: const Icon(Icons.credit_card_rounded), title: const Text('Carte'), subtitle: const Text('En attente de confirmation du prestataire'), onTap: () => Navigator.pop(context, 'card')),\n        ListTile(leading: const Icon(Icons.account_balance_wallet_outlined), title: const Text('Crédit client'), subtitle: const Text('Paiement partiel ou à terme'), onTap: () => Navigator.pop(context, 'credit')),
-      ]),
-    )));
+    final method = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Mode de paiement', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 8),
+          Text('Total : ${_money(totals.total)}', style: const TextStyle(color: GeStockColors.deepEmerald, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 12),
+          ListTile(leading: const Icon(Icons.payments_outlined), title: const Text('Espèces'), subtitle: const Text('Paiement enregistré'), onTap: () => Navigator.pop(context, 'cash')),
+          ListTile(leading: const Icon(Icons.phone_android_rounded), title: const Text('Mobile Money'), subtitle: const Text('En attente de confirmation du prestataire'), onTap: () => Navigator.pop(context, 'mobile_money')),
+          ListTile(leading: const Icon(Icons.credit_card_rounded), title: const Text('Carte'), subtitle: const Text('En attente de confirmation du prestataire'), onTap: () => Navigator.pop(context, 'card')),
+          ListTile(leading: const Icon(Icons.account_balance_wallet_outlined), title: const Text('Crédit client'), subtitle: const Text('Paiement partiel ou à terme'), onTap: () => Navigator.pop(context, 'credit')),
+        ]),
+      )),
+    );
     if (method == null) return;
+    double? creditPaid;
+    if (method == 'credit') {
+      if (selectedCustomerId == null) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sélectionnez un client pour enregistrer une dette.')));
+        return;
+      }
+      final controller = TextEditingController(text: '0');
+      creditPaid = await showDialog<double>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Paiement initial'),
+          content: TextField(controller: controller, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Montant payé maintenant')),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, double.tryParse(controller.text.replaceAll(',', '.')) ?? 0), child: const Text('Continuer')),
+          ],
+        ),
+      );
+      controller.dispose();
+      if (creditPaid == null) return;
+    }
     setState(() => saving = true);
     try {
-      await ref.read(salesRepositoryProvider).createSale(businessId: business['id'] as String, currencyCode: business['currency_code']?.toString() ?? 'XOF', quantities: Map.of(cart), paymentMethod: method, customerId: selectedCustomerId, paymentAmount: creditPaid);
+      await ref.read(salesRepositoryProvider).createSale(
+        businessId: business['id'] as String,
+        currencyCode: business['currency_code']?.toString() ?? 'XOF',
+        quantities: Map.of(cart),
+        paymentMethod: method,
+        customerId: selectedCustomerId,
+        paymentAmount: creditPaid,
+      );
       cart.clear();
       try { await ref.read(syncServiceProvider).syncPending(); } catch (_) {}
       if (mounted) {
@@ -163,7 +197,9 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
       }
     } catch (error) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString().replaceFirst('Bad state: ', ''))));
-    } finally { if (mounted) setState(() => saving = false); }
+    } finally {
+      if (mounted) setState(() => saving = false);
+    }
   }
 
   Future<void> _sync() async {
