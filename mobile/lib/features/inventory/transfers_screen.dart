@@ -35,7 +35,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen>{
       levels=(results[1].data['data'] as List).whereType<Map>().map((e)=>Map<String,Object?>.from(e)).toList();
       history=(results[2].data['data'] as List).whereType<Map>().map((e)=>Map<String,Object?>.from(e)).toList();
       products=results[3] as List<Map<String,Object?>>;
-      sourceId??=warehouses.firstWhere((w)=>w['is_default']==1,orElse:()=>warehouses.isNotEmpty?warehouses.first:<String,Object?>{})['id']?.toString();
+      sourceId??=warehouses.firstWhere((w)=>(w['is_default']==1||w['isDefault']==1,orElse:()=>warehouses.isNotEmpty?warehouses.first:<String,Object?>{})['id']?.toString();
       if(destinationId==null&&warehouses.length>1)destinationId=warehouses.firstWhere((w)=>w['id']!=sourceId)['id']?.toString();
       if(sourceId==destinationId)destinationId=null;
       error=null;loadedBusiness=businessId;
@@ -43,7 +43,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen>{
     finally{if(mounted)setState(()=>loading=false);}
   }
   String _error(Object e){if(e is DioException){final data=e.response?.data;if(data is Map&&data['error']!=null)return data['error'].toString();return e.message??'Erreur réseau';}return e.toString().replaceFirst('Exception: ','');}
-  double available(String productId){return levels.where((x)=>x['warehouse_id']==sourceId&&x['product_id']==productId).fold<double>(0,(sum,x)=>sum+((x['quantity'] as num?)?.toDouble()??0));}
+  double available(String productId){return levels.where((x)=>(x['warehouse_id']??x['warehouseId'])==sourceId&&(x['product_id']??x['productId'])==productId).fold<double>(0,(sum,x)=>sum+((x['quantity'] as num?)?.toDouble()??0));}
   Future<void> addProduct()async{
     final id=selectedProductId,qty=double.tryParse(qtyController.text.replaceAll(',','.'));
     if(id==null||qty==null||!qty.isFinite||qty<=0){message('Choisissez un produit et une quantité valide.');return;}
