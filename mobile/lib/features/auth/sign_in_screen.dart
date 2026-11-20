@@ -262,57 +262,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
 
   Future<void> _forgotPassword() async {
     final email = _email.text.trim();
-    if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+
-    FocusScope.of(context).unfocus();
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _busy = true);
-    try {
-      final auth = ref.read(authRepositoryProvider);
-      if (_isSignUp) {
-        final verificationRequired = await auth.signUp(_name.text.trim(), _email.text.trim(), _password.text);
-        if (mounted) {
-          if (verificationRequired) {
-            setState(() { _verificationPending = true; _isSignUp = false; });
-            _showError('Compte créé. Consultez votre e-mail et vérifiez votre adresse avant de continuer.');
-          } else {
-            context.go('/business/setup');
-          }
-        }
-      } else {
-        final verificationRequired = await auth.signIn(_email.text.trim(), _password.text);
-        if (verificationRequired) {
-          if (mounted) {
-            setState(() => _verificationPending = true);
-            _showError('Vérifiez votre adresse e-mail avant de continuer.');
-          }
-        } else {
-          final businesses = await ref.read(businessRepositoryProvider).list();
-          if (mounted) context.go(businesses.isEmpty ? '/business/setup' : '/home');
-        }
-      }
-    } catch (error) {
-      _showError(_friendlyError(error));
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  String _friendlyError(Object error) {
-    final message = error.toString();
-    if (message.contains('Failed host lookup') || message.contains('SocketException') || message.contains('No address associated with hostname')) {
-      return 'Le serveur de connexion est momentanément injoignable. Vérifiez votre accès Internet puis réessayez. Si le problème persiste, le service d’authentification doit être vérifié.';
-    }
-    return message.replaceFirst('Exception: ', '').replaceFirst('DioException [bad response]: ', '');
-  }
-
-  void _showError(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating, duration: const Duration(seconds: 6)),
-    );
-  }
-}
-).hasMatch(email)) {
+    if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) {
       _showError('Saisissez votre adresse e-mail.');
       return;
     }
@@ -346,12 +296,26 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     try {
       final auth = ref.read(authRepositoryProvider);
       if (_isSignUp) {
-        await auth.signUp(_name.text.trim(), _email.text.trim(), _password.text);
-        if (mounted) context.go('/business/setup');
+        final verificationRequired = await auth.signUp(_name.text.trim(), _email.text.trim(), _password.text);
+        if (mounted) {
+          if (verificationRequired) {
+            setState(() { _verificationPending = true; _isSignUp = false; });
+            _showError('Compte créé. Consultez votre e-mail et vérifiez votre adresse avant de continuer.');
+          } else {
+            context.go('/business/setup');
+          }
+        }
       } else {
-        await auth.signIn(_email.text.trim(), _password.text);
-        final businesses = await ref.read(businessRepositoryProvider).list();
-        if (mounted) context.go(businesses.isEmpty ? '/business/setup' : '/home');
+        final verificationRequired = await auth.signIn(_email.text.trim(), _password.text);
+        if (verificationRequired) {
+          if (mounted) {
+            setState(() => _verificationPending = true);
+            _showError('Vérifiez votre adresse e-mail avant de continuer.');
+          }
+        } else {
+          final businesses = await ref.read(businessRepositoryProvider).list();
+          if (mounted) context.go(businesses.isEmpty ? '/business/setup' : '/home');
+        }
       }
     } catch (error) {
       _showError(_friendlyError(error));
