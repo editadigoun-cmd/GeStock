@@ -74,6 +74,13 @@ class GeStockDatabase {
     await db.execute('CREATE INDEX IF NOT EXISTS suppliers_business_name_idx ON suppliers(business_id,name)');
   }
 
+  Future<void> _createPurchasesTables(DatabaseExecutor db) async {
+    await db.execute("CREATE TABLE IF NOT EXISTS purchases(id TEXT PRIMARY KEY,business_id TEXT NOT NULL,supplier_id TEXT,warehouse_id TEXT NOT NULL,purchase_number TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'received',currency_code TEXT NOT NULL,total REAL NOT NULL DEFAULT 0,ordered_at TEXT,received_at TEXT,created_at TEXT NOT NULL,sync_state TEXT NOT NULL DEFAULT 'pending')");
+    await db.execute('CREATE INDEX IF NOT EXISTS purchases_business_time_idx ON purchases(business_id,created_at)');
+    await db.execute("CREATE TABLE IF NOT EXISTS purchase_items(id TEXT PRIMARY KEY,purchase_id TEXT NOT NULL,product_id TEXT,product_name_snapshot TEXT NOT NULL,quantity REAL NOT NULL,unit_cost REAL NOT NULL,line_total REAL NOT NULL)");
+    await db.execute('CREATE INDEX IF NOT EXISTS purchase_items_purchase_idx ON purchase_items(purchase_id)');
+  }
+
   Future<void> close() async {
     await _database?.close();
     _database = null;
