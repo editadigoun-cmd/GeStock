@@ -5,7 +5,7 @@ import '../local/gestock_database.dart';
 import 'auth_repository.dart';
 
 class ExpenseRepository {
-  ExpenseRepository(this.db,this.auth,{Dio? dio}) : _dio=dio??Dio(BaseOptions(baseUrl:const String.fromEnvironment('GESTOCK_API_URL',defaultValue:'https://gestock-api.ccds22431.workers.dev'),headers:{'Content-Type':'application/json'}));
+  ExpenseRepository(this.db, this.auth, {Dio? dio}) : _dio = dio ?? Dio(BaseOptions(baseUrl: const String.fromEnvironment('GESTOCK_API_URL', defaultValue: 'https://gestock-api.ccds22431.workers.dev'), headers: {'Content-Type': 'application/json'}));
   final GeStockDatabase db;final AuthRepository auth;final Dio _dio;final _uuid=const Uuid();
   Future<List<Map<String,Object?>>> list(String businessId)async{final d=await db.database;return d.query('expenses',where:'business_id=?',whereArgs:[businessId],orderBy:'paid_at DESC');}
   Future<void> pullCloud(String businessId)async{
