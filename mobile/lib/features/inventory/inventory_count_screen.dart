@@ -19,7 +19,7 @@ class _InventoryCountScreenState extends ConsumerState<InventoryCountScreen>{
   if(business==null){if(mounted)setState(()=>_loading=false);return;}
   final rows=await ref.read(productRepositoryProvider).list(business['id'] as String);
   for(final p in rows){if((p['track_stock'] as num?)?.toInt()!=0){_controllers[p['id'] as String]=TextEditingController(text:((p['quantity'] as num?)?.toDouble()??0).toString());}}
-  if(mounted)setState(()=>{_business=business;_products=rows;_loading=false;});
+  if(mounted)setState(() {_business=business;_products=rows;_loading=false;});
  }
  Future<void> _save()async{
   final business=_business;if(business==null)return;
