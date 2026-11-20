@@ -31,7 +31,10 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                   title:Text(c['name'].toString(),style:const TextStyle(fontWeight:FontWeight.w800)),
                   subtitle:Text([c['phone'],c['email'],c['address'],((c['balance_due'] as num?)?.toDouble()??0)>0?'Dette : ${(c['balance_due'] as num).toStringAsFixed(0)} ${business['currency_code']}':null].where((v)=>v!=null&&v.toString().trim().isNotEmpty).join(' · ')),
                   isThreeLine:false,
-                  trailing:Row(mainAxisSize:MainAxisSize.min,children:[Icon(c['sync_state']=='synced'?Icons.cloud_done_outlined:Icons.cloud_upload_outlined,color:c['sync_state']=='synced'?GeStockColors.deepEmerald:GeStockColors.amber),if(((c['balance_due'] as num?)?.toDouble()??0)>0)IconButton(tooltip:'Encaisser une dette',icon:const Icon(Icons.payments_outlined,color:GeStockColors.deepEmerald),onPressed:()=>_collect(businessId,c)]) ,
+                  trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(c['sync_state']=='synced'?Icons.cloud_done_outlined:Icons.cloud_upload_outlined,color:c['sync_state']=='synced'?GeStockColors.deepEmerald:GeStockColors.amber),
+                    if (((c['balance_due'] as num?)?.toDouble()??0)>0) IconButton(tooltip:'Encaisser une dette',icon:const Icon(Icons.payments_outlined,color:GeStockColors.deepEmerald),onPressed:()=>_collect(businessId,c)),
+                  ]),
                   onTap:()=>_edit(businessId,c),
                 ));
               });
