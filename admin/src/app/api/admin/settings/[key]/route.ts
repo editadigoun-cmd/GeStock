@@ -1,0 +1,1 @@
+import {NextRequest} from "next/server";import {proxyAdminApi} from "../../admin-api";export const dynamic="force-dynamic";export async function PUT(r:NextRequest,ctx:{params:Promise<{key:string}>}){const {key}=await ctx.params;return proxyAdminApi(r,"/v1/admin/settings/"+encodeURIComponent(key));}

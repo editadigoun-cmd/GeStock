@@ -1,2 +1,16 @@
-import {NextRequest,NextResponse} from "next/server";const ADMIN_EMAIL="editadigoun@gmail.com";const API_BASE=process.env.GESTOCK_API_URL||"https://gestock-api.ccds22431.workers.dev";
-export async function proxyAdminApi(request:NextRequest,endpoint:string){const email=(request.headers.get("cf-access-authenticated-user-email")||"").toLowerCase(),jwt=request.headers.get("cf-access-jwt-assertion");if(process.env.CLOUDFLARE_ACCESS_ENABLED!=="true"||email!==ADMIN_EMAIL||!jwt)return NextResponse.json({error:"CLOUDFLARE_ACCESS_REQUIRED"},{status:401,headers:{"Cache-Control":"no-store"}});try{const upstream=await fetch(API_BASE+endpoint,{headers:{Authorization:"Bearer "+jwt,accept:"application/json"},cache:"no-store",signal:AbortSignal.timeout(15000)});const body=await upstream.text();let data:unknown;try{data=body?JSON.parse(body):{};}catch{data={error:"INVALID_API_RESPONSE"};}return NextResponse.json(data,{status:upstream.status,headers:{"Cache-Control":"no-store"}});}catch{return NextResponse.json({error:"ADMIN_API_UNAVAILABLE"},{status:502,headers:{"Cache-Control":"no-store"}});}}
+import {NextRequest,NextResponse} from "next/server";
+const ADMIN_EMAIL="editadigoun@gmail.com";
+const API_BASE=process.env.GESTOCK_API_URL||"https://gestock-api.ccds22431.workers.dev";
+export async function proxyAdminApi(request:NextRequest,endpoint:string){
+ const email=(request.headers.get("cf-access-authenticated-user-email")||"").toLowerCase();
+ const jwt=request.headers.get("cf-access-jwt-assertion");
+ if(process.env.CLOUDFLARE_ACCESS_ENABLED!=="true"||email!==ADMIN_EMAIL||!jwt)
+  return NextResponse.json({error:"CLOUDFLARE_ACCESS_REQUIRED"},{status:401,headers:{"Cache-Control":"no-store"}});
+ try{
+  const method=request.method.toUpperCase();
+  const body=["GET","HEAD"].includes(method)?undefined:await request.text();
+  const upstream=await fetch(API_BASE+endpoint,{method,headers:{Authorization:"Bearer "+jwt,accept:"application/json",...(body?{"Content-Type":request.headers.get("content-type")||"application/json"}:{})},body,cache:"no-store",signal:AbortSignal.timeout(15000)});
+  const text=await upstream.text();let data:unknown;try{data=text?JSON.parse(text):{};}catch{data={error:"INVALID_API_RESPONSE"};}
+  return NextResponse.json(data,{status:upstream.status,headers:{"Cache-Control":"no-store"}});
+ }catch{return NextResponse.json({error:"ADMIN_API_UNAVAILABLE"},{status:502,headers:{"Cache-Control":"no-store"}});}
+}

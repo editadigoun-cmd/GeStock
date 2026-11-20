@@ -1,0 +1,1 @@
+import {NextRequest} from "next/server";import {proxyAdminApi} from "../admin-api";export const dynamic="force-dynamic";export async function GET(r:NextRequest){return proxyAdminApi(r,"/v1/admin/support"+r.nextUrl.search);}

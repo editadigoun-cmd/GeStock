@@ -1,0 +1,1 @@
+import {NextRequest} from "next/server";import {proxyAdminApi} from "../../admin-api";export const dynamic="force-dynamic";export async function PUT(r:NextRequest,ctx:{params:Promise<{placement:string}>}){const {placement}=await ctx.params;return proxyAdminApi(r,"/v1/admin/ads/"+encodeURIComponent(placement));}
