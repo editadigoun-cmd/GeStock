@@ -8,6 +8,7 @@ class MoreScreen extends StatelessWidget {
   _item(context,Icons.people_alt_outlined,'Employés','Ajouter, gérer les rôles et accès','/employees'),
   _item(context,Icons.local_shipping_outlined,'Fournisseurs','Contacts et fournisseurs','/suppliers'),
   _item(context,Icons.shopping_bag_outlined,'Achats & réceptions','Entrées de stock via achats','/purchases'),
+  _item(context,Icons.swap_horiz_rounded,'Transferts de stock','Déplacer les produits entre dépôts','/transfers'),
   _item(context,Icons.receipt_long_outlined,'Dépenses','Enregistrer et suivre les dépenses','/expenses'),
   _item(context,Icons.point_of_sale_outlined,'Gestion de caisse','Ouverture, clôture et écarts','/cash'),
   _item(context,Icons.bar_chart_rounded,'Rapports & statistiques','Ventes, dépenses, marge et stock','/reports'),

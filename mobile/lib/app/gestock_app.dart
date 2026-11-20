@@ -7,6 +7,7 @@ import '../features/business/businesses_screen.dart';
 import '../features/dashboard/dashboard_screen.dart';
 import '../features/inventory/inventory_screen.dart';
 import '../features/inventory/inventory_count_screen.dart';
+import '../features/inventory/transfers_screen.dart';
 import '../features/products/products_screen.dart';
 import '../features/sales/sales_screen.dart';
 import '../features/customers/customers_screen.dart';
@@ -34,6 +35,7 @@ final appRouterProvider = Provider<GoRouter>((ref) => GoRouter(
       GoRoute(path: '/support', builder: (_, __) => const SupportScreen()),
       GoRoute(path: '/inventory', builder: (_, __) => const InventoryScreen()),
       GoRoute(path: '/inventory-count', builder: (_, __) => const InventoryCountScreen()),
+      GoRoute(path: '/transfers', builder: (_, __) => const TransfersScreen()),
       GoRoute(path: '/products', builder: (_, __) => const ProductsScreen()),
       GoRoute(path: '/sales', builder: (_, __) => const SalesScreen()),
       GoRoute(path: '/customers', builder: (_, __) => const CustomersScreen()),
