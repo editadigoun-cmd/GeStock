@@ -3,25 +3,190 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 
 class EmployeesScreen extends ConsumerStatefulWidget {
- const EmployeesScreen({super.key});
- @override ConsumerState<EmployeesScreen> createState()=>_EmployeesScreenState();
+  const EmployeesScreen({super.key});
+  @override
+  ConsumerState<EmployeesScreen> createState() => _EmployeesScreenState();
 }
-class _EmployeesScreenState extends ConsumerState<EmployeesScreen>{
- bool busy=false;final email=TextEditingController();String role='staff';
- @override void dispose(){email.dispose();super.dispose();}
- String roleLabel(String value)=>switch(value){'owner'=>'Propriétaire','manager'=>'Gestionnaire','cashier'=>'Caissier','staff'=>'Employé',_=>value};
- IconData roleIcon(String value)=>switch(value){'owner'=>Icons.verified_user,'manager'=>Icons.manage_accounts,'cashier'=>Icons.point_of_sale,'staff'=>Icons.person,_=>Icons.person};
- Future<void> add(String businessId)async{
-  final emailValue=email.text.trim();if(emailValue.isEmpty||!emailValue.contains('@')){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Adresse e-mail invalide.')));return;}
-  setState(()=>busy=true);try{await ref.read(employeeRepositoryProvider).add(businessId,emailValue,role);email.clear();if(mounted){Navigator.pop(context);setState((){});ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Employé ajouté à l’entreprise.')));}}
-  catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.toString().replaceFirst('Exception: ',''))));}
-  finally{if(mounted)setState(()=>busy=false);}
- }
- Future<void> edit(String businessId,Map<String,Object?> employee,{String? newRole,String? newStatus})async{
-  setState(()=>busy=true);try{await ref.read(employeeRepositoryProvider).update(businessId,employee['membershipId'].toString(),role:newRole,status:newStatus);if(mounted)setState((){});}
-  catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.toString())));}
-  finally{if(mounted)setState(()=>busy=false);}
- }
- void showAdd(String businessId)=>showDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,setDialog)=>AlertDialog(title:const Text('Ajouter un employé'),content:Column(mainAxisSize:MainAxisSize.min,children:[TextField(controller:email,keyboardType:TextInputType.emailAddress,decoration:const InputDecoration(labelText:'E-mail du compte GeStock',prefixIcon:Icon(Icons.email_outlined))),const SizedBox(height:12),DropdownButtonFormField<String>(value:role,decoration:const InputDecoration(labelText:'Rôle'),items:const [DropdownMenuItem(value:'staff',child:Text('Employé')),DropdownMenuItem(value:'cashier',child:Text('Caissier')),DropdownMenuItem(value:'manager',child:Text('Gestionnaire'))],onChanged:(v){if(v!=null){role=v;setDialog((){});}}),const SizedBox(height:8),const Text('L’employé doit déjà avoir créé son compte GeStock avec cet e-mail.',style:TextStyle(fontSize:12))]),actions:[TextButton(onPressed:busy?null:()=>Navigator.pop(ctx),child:const Text('Annuler')),FilledButton(onPressed:busy?null:()=>add(businessId),child:busy?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)):const Text('Ajouter'))]));
- @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('Employés')),floatingActionButton:FloatingActionButton.extended(onPressed:busy?null:()=>ref.read(businessRepositoryProvider).active().then((b){if(b!=null&&mounted)showAdd(b['id'].toString());}),icon:const Icon(Icons.person_add_alt_1),label:const Text('Ajouter')),body:FutureBuilder<Map<String,Object?>?>(future:ref.read(businessRepositoryProvider).active(),builder:(context,businessSnap){if(businessSnap.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());final business=businessSnap.data;if(business==null)return const Center(child:Text('Créez d’abord une entreprise.'));final id=business['id'].toString();return FutureBuilder<List<Map<String,Object?>>>(future:ref.read(employeeRepositoryProvider).list(id),builder:(context,snapshot){if(snapshot.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());if(snapshot.hasError)return Center(child:Padding(padding:const EdgeInsets.all(24),child:Text('Erreur de chargement : ${snapshot.error}')));final employees=snapshot.data??[];return RefreshIndicator(onRefresh:()async{setState((){});await ref.read(employeeRepositoryProvider).list(id);},child:employees.isEmpty?ListView(children:[const SizedBox(height:120),const Center(child:Text('Aucun employé'))]):ListView(padding:const EdgeInsets.all(16),children:[Text('${employees.length} membre(s) de l’entreprise',style:const TextStyle(fontWeight:FontWeight.bold)),const SizedBox(height:10),...employees.map((e){final active=e['status']=='active';final currentRole=e['role']?.toString()??'staff';return Card(child:ListTile(leading:CircleAvatar(child:Icon(roleIcon(currentRole))),title:Text((e['name']??e['email']??'Employé').toString()),subtitle:Text('${e['email']??''}\n${roleLabel(currentRole)} · ${active?'Actif':'Désactivé'}'),isThreeLine:true,trailing:currentRole=='owner'?const Icon(Icons.lock):PopupMenuButton<String>(enabled:!busy,itemBuilder:(_)=>[const PopupMenuItem(value:'manager',child:Text('Promouvoir gestionnaire')),const PopupMenuItem(value:'cashier',child:Text('Rôle caissier')),const PopupMenuItem(value:'staff',child:Text('Rôle employé')),PopupMenuItem(value:active?'inactive':'active',child:Text(active?'Désactiver':'Réactiver'))],onSelected:(v){if(v=='active'||v=='inactive')edit(id,e,newStatus:v);else edit(id,e,newRole:v);},),));})]));});}));
+
+class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
+  bool busy = false;
+  final email = TextEditingController();
+  String role = 'staff';
+
+  @override
+  void dispose() {
+    email.dispose();
+    super.dispose();
+  }
+
+  String roleLabel(String value) => switch (value) {
+    'owner' => 'Propriétaire',
+    'manager' => 'Gestionnaire',
+    'cashier' => 'Caissier',
+    'staff' => 'Employé',
+    _ => value,
+  };
+
+  IconData roleIcon(String value) => switch (value) {
+    'owner' => Icons.verified_user,
+    'manager' => Icons.manage_accounts,
+    'cashier' => Icons.point_of_sale,
+    'staff' => Icons.person,
+    _ => Icons.person,
+  };
+
+  Future<void> add(String businessId) async {
+    final emailValue = email.text.trim();
+    if (emailValue.isEmpty || !emailValue.contains('@')) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Adresse e-mail invalide.')));
+      return;
+    }
+    setState(() => busy = true);
+    try {
+      await ref.read(employeeRepositoryProvider).add(businessId, emailValue, role);
+      email.clear();
+      if (mounted) {
+        Navigator.pop(context);
+        setState(() {});
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Employé ajouté à l’entreprise.')));
+      }
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))));
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> edit(String businessId, Map<String, Object?> employee, {String? newRole, String? newStatus}) async {
+    setState(() => busy = true);
+    try {
+      await ref.read(employeeRepositoryProvider).update(businessId, employee['membershipId'].toString(), role: newRole, status: newStatus);
+      if (mounted) setState(() {});
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> showAdd(String businessId) async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('Ajouter un employé'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: email,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(labelText: 'E-mail du compte GeStock', prefixIcon: Icon(Icons.email_outlined)),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: role,
+                decoration: const InputDecoration(labelText: 'Rôle'),
+                items: const [
+                  DropdownMenuItem(value: 'staff', child: Text('Employé')),
+                  DropdownMenuItem(value: 'cashier', child: Text('Caissier')),
+                  DropdownMenuItem(value: 'manager', child: Text('Gestionnaire')),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    role = value;
+                    setDialogState(() {});
+                  }
+                },
+              ),
+              const SizedBox(height: 8),
+              const Text('L’employé doit déjà avoir créé son compte GeStock avec cet e-mail.', style: TextStyle(fontSize: 12)),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: busy ? null : () => Navigator.pop(dialogContext), child: const Text('Annuler')),
+            FilledButton(
+              onPressed: busy ? null : () => add(businessId),
+              child: busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Ajouter'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Employés')),
+    floatingActionButton: FloatingActionButton.extended(
+      onPressed: busy ? null : () async {
+        final business = await ref.read(businessRepositoryProvider).active();
+        if (business != null && mounted) await showAdd(business['id'].toString());
+      },
+      icon: const Icon(Icons.person_add_alt_1),
+      label: const Text('Ajouter'),
+    ),
+    body: FutureBuilder<Map<String, Object?>?>(
+      future: ref.read(businessRepositoryProvider).active(),
+      builder: (context, businessSnap) {
+        if (businessSnap.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+        final business = businessSnap.data;
+        if (business == null) return const Center(child: Text('Créez d’abord une entreprise.'));
+        final businessId = business['id'].toString();
+        return FutureBuilder<List<Map<String, Object?>>>(
+          future: ref.read(employeeRepositoryProvider).list(businessId),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+            if (snapshot.hasError) return Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('Erreur de chargement : ${snapshot.error}')));
+            final employees = snapshot.data ?? [];
+            return RefreshIndicator(
+              onRefresh: () async {
+                setState(() {});
+                await ref.read(employeeRepositoryProvider).list(businessId);
+              },
+              child: employees.isEmpty
+                ? ListView(children: const [SizedBox(height: 120), Center(child: Text('Aucun employé'))])
+                : ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      Text('${employees.length} membre(s) de l’entreprise', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 10),
+                      ...employees.map((employee) {
+                        final active = employee['status'] == 'active';
+                        final currentRole = employee['role']?.toString() ?? 'staff';
+                        return Card(
+                          child: ListTile(
+                            leading: CircleAvatar(child: Icon(roleIcon(currentRole))),
+                            title: Text((employee['name'] ?? employee['email'] ?? 'Employé').toString()),
+                            subtitle: Text('${employee['email'] ?? ''}\n${roleLabel(currentRole)} · ${active ? 'Actif' : 'Désactivé'}'),
+                            isThreeLine: true,
+                            trailing: currentRole == 'owner'
+                              ? const Icon(Icons.lock)
+                              : PopupMenuButton<String>(
+                                  enabled: !busy,
+                                  itemBuilder: (_) => [
+                                    const PopupMenuItem(value: 'manager', child: Text('Promouvoir gestionnaire')),
+                                    const PopupMenuItem(value: 'cashier', child: Text('Rôle caissier')),
+                                    const PopupMenuItem(value: 'staff', child: Text('Rôle employé')),
+                                    PopupMenuItem(value: active ? 'inactive' : 'active', child: Text(active ? 'Désactiver' : 'Réactiver')),
+                                  ],
+                                  onSelected: (value) {
+                                    if (value == 'active' || value == 'inactive') {
+                                      edit(businessId, employee, newStatus: value);
+                                    } else {
+                                      edit(businessId, employee, newRole: value);
+                                    }
+                                  },
+                                ),
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
+            );
+          },
+        );
+      },
+    ),
+  );
 }
