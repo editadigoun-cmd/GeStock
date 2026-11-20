@@ -129,6 +129,18 @@ export const salePayments = sqliteTable('sale_payments', {
   amount: real('amount').notNull(), status: text('status').notNull().default('confirmed'),
   providerReference: text('provider_reference'), paidAt: text('paid_at'), createdAt: timestamp('created_at'),
 });
+export const saleReturns = sqliteTable('sale_returns', {
+  id: id(), businessId: text('business_id').notNull(), saleId: text('sale_id').notNull(),
+  returnNumber: text('return_number').notNull(), reason: text('reason').notNull(),
+  refundMethod: text('refund_method').notNull(), refundAmount: real('refund_amount').notNull(),
+  status: text('status').notNull().default('completed'), returnedAt: text('returned_at').notNull(),
+  createdBy: text('created_by'), createdAt: timestamp('created_at'),
+}, t => ({businessNumber: uniqueIndex('sale_returns_business_number_uq').on(t.businessId,t.returnNumber), saleIdx:index('sale_returns_sale_idx').on(t.saleId)}));
+export const saleReturnItems = sqliteTable('sale_return_items', {
+  id: id(), returnId: text('return_id').notNull(), saleItemId: text('sale_item_id').notNull(),
+  productId: text('product_id'), productNameSnapshot: text('product_name_snapshot').notNull(),
+  quantity: real('quantity').notNull(), unitPrice: real('unit_price').notNull(), refundAmount: real('refund_amount').notNull(),
+});
 export const cashRegisters = sqliteTable('cash_registers', {
   id: id(), businessId: text('business_id').notNull(), locationId: text('location_id'),
   name: text('name').notNull(), isActive: integer('is_active').notNull().default(1), createdAt: timestamp('created_at'),
