@@ -14,7 +14,7 @@ class GeStockDatabase {
     _database = await factory.openDatabase(
       filePath,
       options: OpenDatabaseOptions(
-        version: 10,
+        version: 11,
         onCreate: (db, _) async {
           await db.execute("CREATE TABLE businesses(id TEXT PRIMARY KEY,name TEXT NOT NULL,business_type TEXT NOT NULL,country_code TEXT NOT NULL,currency_code TEXT NOT NULL,timezone TEXT NOT NULL,default_warehouse_id TEXT,created_at TEXT NOT NULL,sync_state TEXT NOT NULL DEFAULT 'pending')");
           await db.execute("CREATE TABLE products(id TEXT PRIMARY KEY,business_id TEXT NOT NULL,name TEXT NOT NULL,sku TEXT,barcode TEXT,category TEXT,unit TEXT NOT NULL DEFAULT 'unité',purchase_price REAL NOT NULL DEFAULT 0,sale_price REAL NOT NULL DEFAULT 0,quantity REAL NOT NULL DEFAULT 0,min_quantity REAL NOT NULL DEFAULT 0,tax_rate REAL NOT NULL DEFAULT 0,track_stock INTEGER NOT NULL DEFAULT 1,updated_at TEXT NOT NULL,sync_state TEXT NOT NULL DEFAULT 'pending')");
@@ -30,6 +30,7 @@ class GeStockDatabase {
           await _createExpensesTable(db);
           await _createCustomerPaymentsTable(db);
           await _createSaleReturnsTables(db);
+          await _createCashTables(db);
         },
         onUpgrade: (db, oldVersion, newVersion) async {
           if (oldVersion < 2) await _createInventoryTables(db);
@@ -49,6 +50,7 @@ class GeStockDatabase {
           if (oldVersion < 8) await _createExpensesTable(db);
           if (oldVersion < 9) await _createCustomerPaymentsTable(db);
           if (oldVersion < 10) await _createSaleReturnsTables(db);
+          if (oldVersion < 11) await _createCashTables(db);
         },
       ),
     );
@@ -78,6 +80,12 @@ class GeStockDatabase {
   Future<void> _createSuppliersTable(DatabaseExecutor db) async {
     await db.execute("CREATE TABLE IF NOT EXISTS suppliers(id TEXT PRIMARY KEY,business_id TEXT NOT NULL,name TEXT NOT NULL,phone TEXT,email TEXT,address TEXT,notes TEXT,created_at TEXT NOT NULL,updated_at TEXT NOT NULL,sync_state TEXT NOT NULL DEFAULT 'pending')");
     await db.execute('CREATE INDEX IF NOT EXISTS suppliers_business_name_idx ON suppliers(business_id,name)');
+  }
+
+  Future<void> _createCashTables(DatabaseExecutor db) async {
+    await db.execute("CREATE TABLE IF NOT EXISTS cash_registers(id TEXT PRIMARY KEY,business_id TEXT NOT NULL,name TEXT NOT NULL,location_id TEXT,is_active INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL,UNIQUE(business_id,name))");
+    await db.execute("CREATE TABLE IF NOT EXISTS cash_sessions(id TEXT PRIMARY KEY,business_id TEXT NOT NULL,register_id TEXT NOT NULL,opened_by TEXT,closed_by TEXT,opening_amount REAL NOT NULL DEFAULT 0,closing_amount REAL,expected_amount REAL,opened_at TEXT NOT NULL,closed_at TEXT,status TEXT NOT NULL DEFAULT 'open',created_at TEXT NOT NULL,updated_at TEXT NOT NULL,sync_state TEXT NOT NULL DEFAULT 'pending')");
+    await db.execute('CREATE INDEX IF NOT EXISTS cash_sessions_business_opened_idx ON cash_sessions(business_id,opened_at)');
   }
 
   Future<void> _createSaleReturnsTables(DatabaseExecutor db) async {
