@@ -35,7 +35,7 @@ class AuthRepository {
     await _requireSession();
   }
 
-  Future<void> signUp(String name, String email, String password) async {
+  Future<bool> signUp(String name, String email, String password) async {
     await _removeLegacyCredential();
     final response = await _dio.post(
       '/auth/register',
@@ -111,7 +111,7 @@ class AuthRepository {
     await _removeLegacyCredential();
   }
 
-  Future<void> changePassword(String currentPassword, String newPassword) async {
+  Future<void> requestPasswordReset(String email) async {\n    final response=await _dio.post('/auth/forgot-password',data:{'email':email.trim()});\n    if(response.statusCode==null||response.statusCode!>=400)throw Exception(_message(response.data));\n  }\n\n  Future<void> resendVerification() async {\n    final token=await _storage.read(key:_tokenKey);if(token==null||token.isEmpty)throw Exception('Session absente.');\n    final response=await _dio.post('/auth/resend-verification',options:Options(headers:{'Authorization':'Bearer $token'}));\n    if(response.statusCode==null||response.statusCode!>=400)throw Exception(_message(response.data));\n  }\n\n  Future<void> changePassword(String currentPassword, String newPassword) async {
     final token = await getAccessToken();
     final response = await _dio.post(
       '/auth/change-password',

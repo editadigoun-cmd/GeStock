@@ -23,7 +23,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   bool _isSignUp = false;
   bool _obscurePassword = true;
   bool _obscureConfirmation = true;
-  bool _busy = false;
+  bool _busy = false;\n  bool _verificationPending = false;
 
   @override
   void initState() {
@@ -257,7 +257,43 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: [BoxShadow(color: color, blurRadius: 90, spreadRadius: 25)]),
       );
 
-  Future<void> _submit() async {
+  Future<void> _forgotPassword() async {\n    final email=_email.text.trim();if(!RegExp(r'^[^\\s@]+@[^\\s@]+\\.[^\\s@]+
+    FocusScope.of(context).unfocus();
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _busy = true);
+    try {
+      final auth = ref.read(authRepositoryProvider);
+      if (_isSignUp) {
+        await auth.signUp(_name.text.trim(), _email.text.trim(), _password.text);
+        if (mounted) context.go('/business/setup');
+      } else {
+        await auth.signIn(_email.text.trim(), _password.text);
+        final businesses = await ref.read(businessRepositoryProvider).list();
+        if (mounted) context.go(businesses.isEmpty ? '/business/setup' : '/home');
+      }
+    } catch (error) {
+      _showError(_friendlyError(error));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  String _friendlyError(Object error) {
+    final message = error.toString();
+    if (message.contains('Failed host lookup') || message.contains('SocketException') || message.contains('No address associated with hostname')) {
+      return 'Le serveur de connexion est momentanément injoignable. Vérifiez votre accès Internet puis réessayez. Si le problème persiste, le service d’authentification doit être vérifié.';
+    }
+    return message.replaceFirst('Exception: ', '').replaceFirst('DioException [bad response]: ', '');
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating, duration: const Duration(seconds: 6)),
+    );
+  }
+}
+).hasMatch(email)){_showError('Saisissez votre adresse e-mail.');return;}\n    setState(()=>_busy=true);try{await ref.read(authRepositoryProvider).requestPasswordReset(email);if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Si ce compte existe, un e-mail de réinitialisation sera envoyé.')));}catch(e){_showError(_friendlyError(e));}finally{if(mounted)setState(()=>_busy=false);}\n  }\n  Future<void> _resendVerification() async {\n    setState(()=>_busy=true);try{await ref.read(authRepositoryProvider).resendVerification();if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('E-mail de vérification renvoyé.')));}catch(e){_showError(_friendlyError(e));}finally{if(mounted)setState(()=>_busy=false);}\n  }\n\n  Future<void> _submit() async {
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
     setState(() => _busy = true);
