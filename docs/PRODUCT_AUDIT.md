@@ -25,18 +25,18 @@ Audit effectué sur `main` le 20 novembre 2026 à partir de README, docs/IMPLEME
 | Inventaire | À vérifier / incomplet | Comptage, écarts, validation |
 | Entrepôts / magasins | Structure backend | Écrans et workflow |
 | Transferts entre magasins | Incomplet | Implémenter |
-| Clients | Développé, CI à confirmer | CRUD mobile hors ligne, API de lecture cloud, sync push, sélection facultative en POS; tests appareil à confirmer |
-| Fournisseurs | Développé, CI à confirmer | CRUD mobile hors ligne, API de lecture cloud et sync push; tests appareil à confirmer |
-| Achats | En cours d'implémentation | Réception multi-produits hors ligne, mise à jour locale du stock, API cloud et sync transactionnelle; CI et tests appareil à confirmer |
+| Clients | Développé, CI passée, API déployée | CRUD mobile hors ligne, API cloud et sync push, sélection facultative en POS; tests appareil à confirmer |
+| Fournisseurs | Développé, CI passée, API déployée | CRUD mobile hors ligne, API cloud et sync push; tests appareil à confirmer |
+| Achats | Développé, CI passée | Réception multi-produits hors ligne, mise à jour locale du stock, API cloud et sync transactionnelle; tests appareil à confirmer |
 | Ventes / POS | Présent, workflow incomplet | Parcours complet, panier, paiement, validation |
 | Paiements multiples | Schema ventes/paiements | UI et tests à vérifier |
 | Retours / remboursements | Manquant | Implémenter |
-| Crédit / dette client | En cours d'implémentation | Vente à crédit avec acompte ou paiement différé, client obligatoire, solde dû local/cloud, encaissements ultérieurs hors ligne, historique des paiements et API sync; CI et tests appareil à confirmer |
+| Crédit / dette client | Développé, CI passée, migration/API déployées | Vente à crédit avec acompte ou paiement différé, client obligatoire, solde dû local/cloud, encaissements ultérieurs hors ligne et historique API; tests appareil et parcours métier à confirmer |
 | Sessions de caisse | Incomplet | Ouverture, clôture, rapprochement |
-| Dépenses | Développé, CI passée | Enregistrement hors ligne, catégories, API cloud et sync; déploiement API et tests appareil à confirmer |
+| Dépenses | Développé, CI passée, API déployée | Enregistrement hors ligne, catégories et synchronisation; tests appareil à confirmer |
 | Reçus / impression | Manquant | Implémenter |
 | Tableau de bord / statistiques | Limité | KPI, filtres et périodes |
-| Synchronisation hors ligne | Code/outbox et pull des niveaux de stock cloud développés | Test appareil; sync cloud et conflits |
+| Synchronisation hors ligne | CI passée; pull cloud des niveaux de stock | Test appareil; sync cloud et conflits |
 | Résolution conflits sync | Incomplète | UI et stratégies |
 | Multi-appareils | Prévu | Tester données partagées |
 | Gestion utilisateurs / rôles | Admin CRUD incomplet | Implémenter |
