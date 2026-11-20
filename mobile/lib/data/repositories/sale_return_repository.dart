@@ -17,7 +17,6 @@ class SaleReturnRepository {
     if(!['cash','mobile_money','card','bank_transfer','store_credit','other'].contains(refundMethod))throw ArgumentError('Mode de remboursement invalide.');
     final d=await db.database;final returnId=_uuid.v4();final now=DateTime.now().toUtc().toIso8601String();final number='RET-${now.replaceAll(RegExp(r'[-:T.]'), '').substring(0,12)}-${returnId.substring(0,4).toUpperCase()}';
     final saleRows=await d.query('sales',where:'id=? AND business_id=?',whereArgs:[saleId,businessId],limit:1);if(saleRows.isEmpty)throw StateError('Vente introuvable.');
-    final sale=saleRows.first;
     final items=await d.query('sale_items',where:'sale_id=?',whereArgs:[saleId]);
     final movements=await d.query('stock_movements',where:'source_type=? AND source_id=?',whereArgs:['sale',saleId],limit:100);
     final movementByProduct={for(final m in movements)m['product_id']:m};
