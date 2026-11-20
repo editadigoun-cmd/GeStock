@@ -9,6 +9,7 @@ class InventoryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => Scaffold(
     appBar: AppBar(title: const Text('Gestion des stocks'), actions: [
+      IconButton(onPressed: () => context.go('/inventory-count'), icon: const Icon(Icons.fact_check_outlined), tooltip: 'Inventaire physique'),
       IconButton(onPressed: () => context.go('/products'), icon: const Icon(Icons.edit_note_rounded), tooltip: 'Catalogue et ajustements'),
     ]),
     body: FutureBuilder<Map<String, Object?>?>(
