@@ -12,5 +12,5 @@ customerRoutes.get('/', async (c) => {
   if (!await hasBusinessAccess(c.get('userId'), businessId)) return c.json({ error: 'FORBIDDEN' }, 403);
   const q = c.req.query('q') ?? '';
   const rows = await db.select().from(customers).where(and(eq(customers.businessId,businessId),like(customers.name,'%'+q+'%'))).limit(500);
-  return c.json({ data: rows });
+  return c.json({ data: rows.map(r => ({ id:r.id, business_id:r.businessId, name:r.name, phone:r.phone, email:r.email, address:r.address, notes:r.notes, balance_due:r.balanceDue, created_at:r.createdAt, updated_at:r.updatedAt })) });
 });
