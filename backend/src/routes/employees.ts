@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { db } from '../services/db.js';
 import { appUsers, businessMemberships, businesses } from '../schema.js';
 import { hashSessionToken } from '../services/password.js';
+import { hasBusinessPermission } from '../services/access.js';
 import type { AppEnv } from '../middleware/auth.js';
 
 export const employeeRoutes = new Hono<AppEnv>();
@@ -16,20 +17,20 @@ async function businessRole(subject:string,businessId:string){
 async function actorUserId(subject:string){const [u]=await db.select({id:appUsers.id}).from(appUsers).where(eq(appUsers.authSubject,subject)).limit(1);return u?.id;}
 employeeRoutes.get('/',async c=>{
  const businessId=c.req.query('business_id');if(!businessId)return c.json({error:'BUSINESS_REQUIRED'},400);
- const role=await businessRole(c.get('userId'),businessId);if(!role)return c.json({error:'FORBIDDEN'},403);
+ if(!await hasBusinessPermission(c.get('userId'),businessId,'employees.read'))return c.json({error:'FORBIDDEN'},403);
  const rows=await db.select({membershipId:businessMemberships.id,userId:appUsers.id,email:appUsers.email,name:appUsers.displayName,phone:appUsers.phone,role:businessMemberships.role,permissions:businessMemberships.permissions,status:businessMemberships.status,createdAt:businessMemberships.createdAt}).from(businessMemberships).innerJoin(appUsers,eq(appUsers.id,businessMemberships.userId)).where(eq(businessMemberships.businessId,businessId));
  return c.json({data:rows});
 });
 employeeRoutes.get('/invitations',async c=>{
  const businessId=c.req.query('business_id');if(!businessId)return c.json({error:'BUSINESS_REQUIRED'},400);
- const actor=await businessRole(c.get('userId'),businessId);if(!actor)return c.json({error:'FORBIDDEN'},403);
+ const actor=await businessRole(c.get('userId'),businessId);if(!actor||!await hasBusinessPermission(c.get('userId'),businessId,'employees.read'))return c.json({error:'FORBIDDEN'},403);
  const rows=await c.env.DB.prepare("SELECT id,email,role,created_at,expires_at,accepted_at,revoked_at FROM business_invitations WHERE business_id=? ORDER BY created_at DESC").bind(businessId).all();
  return c.json({data:rows.results??[]});
 });
 employeeRoutes.post('/invitations',async c=>{
  const p=z.object({business_id:z.string().uuid(),email:z.string().email().max(254),role:z.enum(roles).default('staff')}).safeParse(await c.req.json().catch(()=>null));
  if(!p.success)return c.json({error:'VALIDATION_ERROR'},422);
- const input=p.data,actor=await businessRole(c.get('userId'),input.business_id);if(!actor)return c.json({error:'FORBIDDEN'},403);if(!['owner','manager'].includes(actor.role))return c.json({error:'INSUFFICIENT_ROLE'},403);
+ const input=p.data,actor=await businessRole(c.get('userId'),input.business_id);if(!actor||!await hasBusinessPermission(c.get('userId'),input.business_id,'employees.manage'))return c.json({error:'INSUFFICIENT_ROLE'},403);
  const email=input.email.trim().toLowerCase();
  const [target]=await db.select({id:appUsers.id,email:appUsers.email}).from(appUsers).where(eq(appUsers.email,email)).limit(1);
  if(target){const [m]=await db.select({status:businessMemberships.status}).from(businessMemberships).where(and(eq(businessMemberships.businessId,input.business_id),eq(businessMemberships.userId,target.id))).limit(1);if(m?.status==='active')return c.json({error:'EMPLOYEE_ALREADY_ADDED'},409);}
@@ -60,7 +61,7 @@ employeeRoutes.post('/',async c=>{
 });
 employeeRoutes.patch('/:membershipId',async c=>{
  const membershipId=c.req.param('membershipId');const p=z.object({business_id:z.string().uuid(),status:z.enum(['active','inactive']),role:z.enum(roles).optional()}).safeParse(await c.req.json().catch(()=>null));if(!p.success)return c.json({error:'VALIDATION_ERROR'},422);
- const actor=await businessRole(c.get('userId'),p.data.business_id);if(!actor||!['owner','manager'].includes(actor.role))return c.json({error:'FORBIDDEN'},403);
+ const actor=await businessRole(c.get('userId'),p.data.business_id);if(!actor||!await hasBusinessPermission(c.get('userId'),p.data.business_id,'employees.manage'))return c.json({error:'FORBIDDEN'},403);
  const [row]=await db.select().from(businessMemberships).where(and(eq(businessMemberships.id,membershipId),eq(businessMemberships.businessId,p.data.business_id))).limit(1);if(!row)return c.json({error:'EMPLOYEE_NOT_FOUND'},404);if(row.role==='owner')return c.json({error:'OWNER_CANNOT_BE_DISABLED'},409);
  await db.update(businessMemberships).set({status:p.data.status,role:p.data.role??row.role,permissions:p.data.role?{role:p.data.role}:row.permissions}).where(eq(businessMemberships.id,membershipId));
  return c.json({data:{membership_id:membershipId,status:p.data.status,role:p.data.role??row.role}});
