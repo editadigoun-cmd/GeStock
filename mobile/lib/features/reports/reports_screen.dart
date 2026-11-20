@@ -42,7 +42,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       [businessId],
     );
     final low = await db.rawQuery(
-      "SELECT COUNT(*) AS count FROM products WHERE business_id=? AND quantity<=min_quantity AND is_active=1",
+      "SELECT COUNT(*) AS count FROM products WHERE business_id=? AND quantity<=min_quantity",
       [businessId],
     );
 
