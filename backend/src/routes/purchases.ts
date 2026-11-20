@@ -2,14 +2,14 @@ import { Hono } from 'hono';
 import { and, eq } from 'drizzle-orm';
 import { db } from '../services/db.js';
 import { purchases, purchaseItems } from '../schema.js';
-import { hasBusinessAccess } from '../services/access.js';
+import { hasBusinessPermission } from '../services/access.js';
 import type { AppEnv } from '../middleware/auth.js';
 
 export const purchaseRoutes = new Hono<AppEnv>();
 purchaseRoutes.get('/', async (c) => {
   const businessId = c.req.query('business_id');
   if (!businessId) return c.json({ error: 'BUSINESS_REQUIRED' }, 400);
-  if (!await hasBusinessAccess(c.get('userId'), businessId)) return c.json({ error: 'FORBIDDEN' }, 403);
+  if (!await hasBusinessPermission(c.get('userId'), businessId, 'purchases.read')) return c.json({ error: 'FORBIDDEN' }, 403);
   const rows = await db.select().from(purchases).where(eq(purchases.businessId, businessId)).orderBy(purchases.createdAt);
   const data = [];
   for (const row of rows) {
