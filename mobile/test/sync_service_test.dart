@@ -118,6 +118,7 @@ void main() {
     expect((await database.query('businesses', where: 'id = ?', whereArgs: [businessId])).single['sync_state'], 'synced');
     expect((await database.query('products', where: 'business_id = ?', whereArgs: [businessId])).single['sync_state'], 'synced');
     expect((await database.query('stock_movements', where: 'business_id = ?', whereArgs: [businessId])).single['sync_state'], 'synced');
+    expect((await database.query('products', where: 'business_id = ?', whereArgs: [businessId])).single['quantity'], 3);
   });
 
   test('sync conflict remains queued as conflict and marks movement status', () async {
