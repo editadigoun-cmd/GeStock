@@ -27,7 +27,14 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
   List<Map<String, Object?>> warehouses = [];
   List<Map<String, Object?>> levels = [];
   List<Map<String, Object?>> products = [];
-  List<Map<String, Object?>> history = [];\n  late Future<Map<String, Object?>?> businessFuture;\n\n  @override\n  void initState() {\n    super.initState();\n    businessFuture = ref.read(businessRepositoryProvider).active();\n  }
+  List<Map<String, Object?>> history = [];
+  late Future<Map<String, Object?>?> businessFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    businessFuture = ref.read(businessRepositoryProvider).active();
+  }
 
   @override
   void dispose() {
