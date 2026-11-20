@@ -20,11 +20,16 @@ stockRoutes.post('/movements', async (c) => {
   const [product] = await db.select({ id: products.id }).from(products).where(and(eq(products.id, input.product_id), eq(products.businessId, input.business_id))).limit(1);
   const [warehouse] = await db.select({ id: warehouses.id }).from(warehouses).where(and(eq(warehouses.id, input.warehouse_id), eq(warehouses.businessId, input.business_id))).limit(1);
   if (!product || !warehouse) return c.json({ error: 'PRODUCT_OR_WAREHOUSE_NOT_FOUND' }, 404);
+  if (input.quantity_delta < 0) {
+    const [level] = await db.select({ quantity: stockLevels.quantity }).from(stockLevels).where(and(eq(stockLevels.warehouseId, input.warehouse_id), eq(stockLevels.productId, input.product_id))).limit(1);
+    const available = Number(level?.quantity ?? 0);
+    if (available + input.quantity_delta < -1e-8) return c.json({ error: 'INSUFFICIENT_STOCK', available }, 409);
+  }
   const now = new Date().toISOString(), movementId = crypto.randomUUID();
-  await db.batch([
+  try { await db.batch([
     db.insert(stockMovements).values({ id: movementId, businessId: input.business_id, warehouseId: input.warehouse_id, productId: input.product_id, movementType: input.movement_type, quantityDelta: input.quantity_delta, unitCost: input.unit_cost ?? null, note: input.note ?? null, occurredAt: now, createdAt: now }),
     db.insert(stockLevels).values({ id: crypto.randomUUID(), businessId: input.business_id, warehouseId: input.warehouse_id, productId: input.product_id, quantity: input.quantity_delta, updatedAt: now }).onConflictDoUpdate({ target: [stockLevels.warehouseId, stockLevels.productId], set: { quantity: sql`${stockLevels.quantity} + ${input.quantity_delta}`, updatedAt: now } }),
-  ]);
+  ]); } catch (error) { const message = error instanceof Error ? error.message : ''; if (message.includes('INSUFFICIENT_STOCK') || message.includes('CHECK constraint')) return c.json({ error: 'INSUFFICIENT_STOCK' }, 409); throw error; }
   const [movement] = await db.select().from(stockMovements).where(eq(stockMovements.id, movementId)).limit(1);
   return c.json({ data: movement }, 201);
 });
