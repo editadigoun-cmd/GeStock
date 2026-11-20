@@ -33,6 +33,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       "SELECT si.product_name_snapshot AS name, SUM(si.quantity) AS qty, SUM(si.line_total) AS revenue, COALESCE(SUM(si.quantity*COALESCE(p.purchase_price,0)),0) AS cost FROM sale_items si JOIN sales s ON s.id=si.sale_id LEFT JOIN products p ON p.id=si.product_id WHERE s.business_id=? AND s.status='completed' AND date(s.sold_at)>=date(?) GROUP BY si.product_name_snapshot ORDER BY revenue DESC LIMIT 5",
       [businessId, start],
     );
+    final costRows = await db.rawQuery(
+      "SELECT COALESCE(SUM(si.quantity*COALESCE(p.purchase_price,0)),0) AS cost FROM sale_items si JOIN sales s ON s.id=si.sale_id LEFT JOIN products p ON p.id=si.product_id WHERE s.business_id=? AND s.status='completed' AND date(s.sold_at)>=date(?)",
+      [businessId, start],
+    );
     final stock = await db.rawQuery(
       "SELECT COUNT(*) AS products, COALESCE(SUM(quantity),0) AS units, COALESCE(SUM(quantity*purchase_price),0) AS value FROM products WHERE business_id=?",
       [businessId],
@@ -44,7 +48,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
     final revenue = (sales.first['revenue'] as num).toDouble();
     final expense = (expenses.first['total'] as num).toDouble();
-    final estimatedCost = items.fold<double>(0, (sum, row) => sum + (row['cost'] as num).toDouble());
+    final estimatedCost = (costRows.first['cost'] as num).toDouble();
     return {
       'start': start,
       'salesCount': (sales.first['count'] as num).toInt(),
