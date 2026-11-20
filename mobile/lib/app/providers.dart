@@ -13,6 +13,7 @@ import '../data/repositories/sale_return_repository.dart';
 import '../data/repositories/cash_repository.dart';
 import '../data/repositories/employee_repository.dart';
 import '../data/services/sync_service.dart';
+import '../data/services/auto_sync_runner.dart';
 
 final databaseProvider = Provider<GeStockDatabase>((ref) {
   final db = GeStockDatabase();
