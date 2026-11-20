@@ -34,7 +34,7 @@ class CashRepository {
   Future<void> close({required String businessId,required String sessionId,required double closingAmount})async{
     if(!closingAmount.isFinite||closingAmount<0)throw ArgumentError('Montant réel invalide.');
     final d=await db.database;final rows=await d.query('cash_sessions',where:"id=? AND business_id=? AND status='open'",whereArgs:[sessionId,businessId],limit:1);if(rows.isEmpty)throw StateError('Aucune caisse ouverte.');
-    final summary=await this.summary(businessId,sessionId);final now=DateTime.now().toUtc().toIso8601String();final difference=closingAmount-summary['expected']!;
+    final summary=await this.summary(businessId,sessionId);final now=DateTime.now().toUtc().toIso8601String();
     final payload={'id':sessionId,'business_id':businessId,'register_id':rows.first['register_id'],'closing_amount':closingAmount,'expected_amount':summary['expected'],'difference':difference,'closed_at':now,'status':'closed'};
     await d.transaction((txn)async{await txn.update('cash_sessions',{'closing_amount':closingAmount,'expected_amount':summary['expected'],'closed_at':now,'status':'closed','updated_at':now,'sync_state':'pending'},where:'id=?',whereArgs:[sessionId]);await txn.insert('outbox',{'id':_uuid.v4(),'business_id':businessId,'entity_type':'cash_session','entity_id':sessionId,'operation':'close','payload':jsonEncode(payload),'created_at':now,'attempts':0,'status':'queued'});});
   }
