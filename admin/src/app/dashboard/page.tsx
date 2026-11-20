@@ -5,7 +5,7 @@ type Health = { ok?: boolean; service?: string; version?: string; database?: str
 type Status = { api: Health | null; d1: Health | null; checkedAt: string; errors: string[] };
 type Overview = { users: number; businesses: number; active_businesses: number; products: number; sales: number; stock_movements: number; sync_pending: number; sync_conflicts: number };
 type Business = { id: string; name: string; business_type: string; country_code: string; currency_code: string; status: string; created_at?: string; members: number; products: number; sales: number; revenue: number };
-type AdminUser = { id: string; email?: string | null; display_name?: string | null; created_at?: string | null; active_businesses: number; organizations: number; devices: number; last_seen?: string | null };
+type AdminUser = { id: string; email?: string | null; display_name?: string | null; status?: string; created_at?: string | null; active_businesses: number; organizations: number; devices: number; last_seen?: string | null };
 type AdminSale = { id: string; sale_number: string; business_id: string; business_name?: string; currency_code: string; total: number; amount_paid: number; status: string; sold_at?: string; payment_method?: string; payment_status?: string };
 type SyncOperation = { id: string; business_name?: string; entity_type: string; entity_id?: string; operation_type: string; status: string; created_at?: string; processed_at?: string; platform?: string; actor_email?: string };
 type SyncData = { summary: Record<string, number>; operations: SyncOperation[] };
@@ -15,6 +15,10 @@ type AdminProduct = { id: string; business_id: string; business_name?: string; n
 type ProductsData = { data: AdminProduct[]; count: number; capped?: boolean };
 type AdminMovement = { id: string; business_name?: string; currency_code?: string; product_name?: string; sku?: string; warehouse_name?: string; movement_type: string; quantity_delta: number; unit_cost?: number | null; source_type?: string; source_id?: string; note?: string; actor_email?: string; occurred_at?: string };
 type MovementsData = { data: AdminMovement[]; count: number; capped?: boolean };
+type SupportTicket = {id:string;email?:string;display_name?:string;business_name?:string;subject:string;message:string;status:string;priority:string;admin_reply?:string|null;created_at:string};
+type Subscription = {business_id:string;business_name:string;currency_code:string;plan_code:string;status:string;started_at:string;ends_at?:string|null};
+type AdSetting = {placement_key:string;enabled:number;provider:string;ad_unit_id?:string|null;frequency_cap:number};
+type AuditEntry = {id:string;actor_email:string;action:string;entity_type:string;entity_id?:string;created_at:string};
 const ADMIN_EMAIL = "editadigoun@gmail.com";
 const capabilities = [
   { name: "Catalogue et stock", detail: "Recherche globale du catalogue, niveaux et journal des mouvements (lecture seule)", state: "Connecté" },
@@ -47,12 +51,21 @@ export default function Dashboard() {
   const [productQuery, setProductQuery] = useState("");
   const [movementsData, setMovementsData] = useState<MovementsData | null>(null);
   const [movementQuery, setMovementQuery] = useState("");
+  const [tickets,setTickets]=useState<SupportTicket[]>([]);
+  const [subscriptions,setSubscriptions]=useState<Subscription[]>([]);
+  const [adSettings,setAdSettings]=useState<AdSetting[]>([]);
+  const [auditEntries,setAuditEntries]=useState<AuditEntry[]>([]);
+  const [selectedBusiness,setSelectedBusiness]=useState("");
+  const [planCode,setPlanCode]=useState("free");
+  const [subscriptionStatus,setSubscriptionStatus]=useState("active");
+  const [settingKey,setSettingKey]=useState("");
+  const [settingJson,setSettingJson]=useState("{}");
   const [errors, setErrors] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   async function refresh() {
     setLoading(true);
-    const [healthResult, overviewResult, businessResult, userResult, salesResult, syncResult, inventoryResult, productsResult, movementsResult] = await Promise.allSettled([
+    const [healthResult, overviewResult, businessResult, userResult, salesResult, syncResult, inventoryResult, productsResult, movementsResult, ticketResult, subscriptionResult, adResult, auditResult] = await Promise.allSettled([
       fetch("/api/status", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/admin/overview", { cache: "no-store" }).then(async (r) => ({ ok: r.ok, body: await r.json() })),
       fetch("/api/admin/businesses", { cache: "no-store" }).then(async (r) => ({ ok: r.ok, body: await r.json() })),
@@ -62,6 +75,10 @@ export default function Dashboard() {
       fetch("/api/admin/inventory", { cache: "no-store" }).then(async (r) => ({ ok: r.ok, body: await r.json() })),
       fetch(`/api/admin/products?q=${encodeURIComponent(productQuery)}`, { cache: "no-store" }).then(async (r) => ({ ok: r.ok, body: await r.json() })),
       fetch(`/api/admin/movements?q=${encodeURIComponent(movementQuery)}`, { cache: "no-store" }).then(async (r) => ({ ok: r.ok, body: await r.json() })),
+      fetch("/api/admin/support",{cache:"no-store"}).then(async r=>({ok:r.ok,body:await r.json()})),
+      fetch("/api/admin/subscriptions",{cache:"no-store"}).then(async r=>({ok:r.ok,body:await r.json()})),
+      fetch("/api/admin/ads",{cache:"no-store"}).then(async r=>({ok:r.ok,body:await r.json()})),
+      fetch("/api/admin/audit?limit=100",{cache:"no-store"}).then(async r=>({ok:r.ok,body:await r.json()})),
     ]);
     const nextErrors: string[] = [];
     if (healthResult.status === "fulfilled") setStatus(healthResult.value as Status);
@@ -82,6 +99,10 @@ export default function Dashboard() {
     else { setProductsData(null); nextErrors.push("Le catalogue global n’est pas accessible."); }
     if (movementsResult.status === "fulfilled" && movementsResult.value.ok) setMovementsData(movementsResult.value.body ?? null);
     else { setMovementsData(null); nextErrors.push("Le journal global des mouvements n’est pas accessible."); }
+    if(ticketResult.status==="fulfilled"&&ticketResult.value.ok)setTickets(ticketResult.value.body?.data??[]);else{setTickets([]);nextErrors.push("Les tickets support ne sont pas accessibles.");}
+    if(subscriptionResult.status==="fulfilled"&&subscriptionResult.value.ok)setSubscriptions(subscriptionResult.value.body?.data??[]);else{setSubscriptions([]);nextErrors.push("Les abonnements ne sont pas accessibles.");}
+    if(adResult.status==="fulfilled"&&adResult.value.ok)setAdSettings(adResult.value.body?.data??[]);else{setAdSettings([]);nextErrors.push("Les paramètres publicitaires ne sont pas accessibles.");}
+    if(auditResult.status==="fulfilled"&&auditResult.value.ok)setAuditEntries(auditResult.value.body?.data??[]);else{setAuditEntries([]);nextErrors.push("Le journal d’audit n’est pas accessible.");}
     setErrors(nextErrors);
     setLoading(false);
   }
@@ -103,6 +124,9 @@ export default function Dashboard() {
 
   async function logout() {
     location.href = "/cdn-cgi/access/logout";
+  }
+  async function adminAction(url:string,method:string,body:unknown){
+    try{const response=await fetch(url,{method,headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data?.message||data?.error||"Action refusée");await refresh();return true;}catch(e){alert(e instanceof Error?e.message:"Action impossible");return false;}
   }
   const serviceRow = (symbol: string, name: string, detail: string, available?: boolean) => (
     <div className="service-row" key={name}>
@@ -137,10 +161,10 @@ export default function Dashboard() {
       </section>
       <section className="admin-panel"><div className="panel-title"><div><h2>Annuaire utilisateurs</h2><p>Comptes réels D1 — lecture seule, maximum 100 résultats.</p></div><span className="panel-icon">♙</span></div>
         <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:12}}><input aria-label="Rechercher un utilisateur" placeholder="Email ou nom…" value={userQuery} onChange={(e)=>setUserQuery(e.target.value)} style={{flex:"1 1 220px",minWidth:180,padding:"10px 12px",border:"1px solid var(--border, #d8dde5)",borderRadius:8,background:"var(--surface, #fff)",color:"inherit"}}/><button className="refresh" onClick={refresh} disabled={loading}>Rechercher</button><small>{number(users.length)} résultat(s)</small></div>
-        {users.length === 0 ? <p className="empty-state">{loading ? "Chargement…" : "Aucun utilisateur enregistré correspondant."}</p> : <div className="table-scroll"><table className="business-table"><thead><tr><th>Utilisateur</th><th>Créé le</th><th>Entreprises</th><th>Organisations</th><th>Appareils</th><th>Dernière activité sync</th></tr></thead><tbody>{users.map((user) => <tr key={user.id}><td><b>{user.display_name || "Nom non renseigné"}</b><small>{user.email || "Email non renseigné"} · {user.id.slice(0,8)}</small></td><td>{date(user.created_at || undefined)}</td><td>{number(user.active_businesses)}</td><td>{number(user.organizations)}</td><td>{number(user.devices)}</td><td>{date(user.last_seen || undefined)}</td></tr>)}</tbody></table></div>}
+        {users.length === 0 ? <p className="empty-state">{loading ? "Chargement…" : "Aucun utilisateur enregistré correspondant."}</p> : <div className="table-scroll"><table className="business-table"><thead><tr><th>Utilisateur</th><th>Créé le</th><th>Entreprises</th><th>Organisations</th><th>Appareils</th><th>Dernière activité sync</th><th>Statut</th><th>Action</th></tr></thead><tbody>{users.map((user) => <tr key={user.id}><td><b>{user.display_name || "Nom non renseigné"}</b><small>{user.email || "Email non renseigné"} · {user.id.slice(0,8)}</small></td><td>{date(user.created_at || undefined)}</td><td>{number(user.active_businesses)}</td><td>{number(user.organizations)}</td><td>{number(user.devices)}</td><td>{date(user.last_seen || undefined)}</td><td><span className={"business-status "+(user.status==="suspended"?"inactive":"active")}>{user.status||"active"}</span></td><td><button className="refresh" onClick={()=>adminAction("/api/admin/users/"+user.id,"PATCH",{status:user.status==="suspended"?"active":"suspended"})}>{user.status==="suspended"?"Réactiver":"Suspendre"}</button></td></tr>)}</tbody></table></div>}
       </section>
       <section className="admin-panel"><div className="panel-title"><div><h2>Entreprises enregistrées</h2><p>Liste backend — lecture seule, sans données inventées.</p></div><span className="panel-icon">▦</span></div>
-        {businesses.length === 0 ? <p className="empty-state">{loading ? "Chargement…" : "Aucune entreprise enregistrée dans D1."}</p> : <div className="table-scroll"><table className="business-table"><thead><tr><th>Entreprise</th><th>Type / pays</th><th>Membres</th><th>Produits</th><th>Ventes</th><th>Revenu</th><th>Statut</th></tr></thead><tbody>{businesses.map((business) => <tr key={business.id}><td><b>{business.name}</b><small>{business.id.slice(0, 8)}</small></td><td>{business.business_type}<small>{business.country_code} · {business.currency_code}</small></td><td>{number(business.members)}</td><td>{number(business.products)}</td><td>{number(business.sales)}</td><td>{money(business.revenue, business.currency_code)}</td><td><span className={"business-status " + (business.status === "active" ? "active" : "inactive")}>{business.status}</span></td></tr>)}</tbody></table></div>}
+        {businesses.length === 0 ? <p className="empty-state">{loading ? "Chargement…" : "Aucune entreprise enregistrée dans D1."}</p> : <div className="table-scroll"><table className="business-table"><thead><tr><th>Entreprise</th><th>Type / pays</th><th>Membres</th><th>Produits</th><th>Ventes</th><th>Revenu</th><th>Statut</th><th>Action</th></tr></thead><tbody>{businesses.map((business) => <tr key={business.id}><td><b>{business.name}</b><small>{business.id.slice(0, 8)}</small></td><td>{business.business_type}<small>{business.country_code} · {business.currency_code}</small></td><td>{number(business.members)}</td><td>{number(business.products)}</td><td>{number(business.sales)}</td><td>{money(business.revenue, business.currency_code)}</td><td><span className={"business-status " + (business.status === "active" ? "active" : "inactive")}>{business.status}</span></td><td><button className="refresh" onClick={()=>adminAction("/api/admin/businesses/"+business.id+"/status","PATCH",{status:business.status==="suspended"?"active":"suspended"})}>{business.status==="suspended"?"Réactiver":"Suspendre"}</button></td></tr>)}</tbody></table></div>}
       </section>
       <section className="admin-panel"><div className="panel-title"><div><h2>Ventes récentes</h2><p>50 dernières transactions réelles, sans action de modification.</p></div><span className="panel-icon">€</span></div>
         {sales.length === 0 ? <p className="empty-state">{loading ? "Chargement…" : "Aucune vente dans D1."}</p> : <div className="table-scroll"><table className="business-table"><thead><tr><th>Date</th><th>Entreprise</th><th>Référence</th><th>Paiement</th><th>Montant</th><th>État</th></tr></thead><tbody>{sales.map((sale) => <tr key={sale.id}><td>{date(sale.sold_at)}</td><td>{sale.business_name || sale.business_id.slice(0,8)}</td><td>{sale.sale_number}</td><td>{sale.payment_method || "—"}<small>{statusLabel(sale.payment_status)}</small></td><td>{money(sale.total, sale.currency_code)}</td><td><span className={"business-status " + (sale.status === "completed" ? "active" : "inactive")}>{statusLabel(sale.status)}</span></td></tr>)}</tbody></table></div>}
@@ -167,6 +191,23 @@ export default function Dashboard() {
         {serviceRow("↗", "API GeStock", "Health check", status?.api?.ok)}
         {serviceRow("▦", "Cloudflare D1", "Base et schéma", status?.d1?.ok)}
         {serviceRow("♙", "Cloudflare Access", "Protection edge vérifiée au déploiement", authMode.includes("Cloudflare Access"))}
+      </section>
+      <section className="admin-panel"><div className="panel-title"><div><h2>Support utilisateurs</h2><p>Tickets, réponses et suivi du traitement.</p></div><span className="panel-icon">✉</span></div>
+        {!tickets.length?<p className="empty-state">{loading?"Chargement…":"Aucun ticket support."}</p>:<div className="table-scroll"><table className="business-table"><thead><tr><th>Date</th><th>Utilisateur</th><th>Entreprise</th><th>Demande</th><th>État</th><th>Réponse admin</th><th>Action</th></tr></thead><tbody>{tickets.map(t=><tr key={t.id}><td>{date(t.created_at)}</td><td>{t.display_name||"—"}<small>{t.email||"—"}</small></td><td>{t.business_name||"—"}</td><td><b>{t.subject}</b><small>{t.message}</small></td><td><select defaultValue={t.status} id={"ticket-status-"+t.id}><option value="open">Ouvert</option><option value="in_progress">En cours</option><option value="resolved">Résolu</option><option value="closed">Fermé</option></select></td><td><textarea defaultValue={t.admin_reply||""} id={"ticket-reply-"+t.id} rows={2} style={{minWidth:180}}/></td><td><button className="refresh" onClick={()=>adminAction("/api/admin/support/"+t.id,"PATCH",{status:(document.getElementById("ticket-status-"+t.id) as HTMLSelectElement)?.value,admin_reply:(document.getElementById("ticket-reply-"+t.id) as HTMLTextAreaElement)?.value})}>Enregistrer</button></td></tr>)}</tbody></table></div>}
+      </section>
+      <section className="admin-panel"><div className="panel-title"><div><h2>Abonnements</h2><p>Configuration des droits par entreprise; aucun paiement externe n’est déclenché.</p></div><span className="panel-icon">◇</span></div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}><select value={selectedBusiness} onChange={e=>setSelectedBusiness(e.target.value)}><option value="">Choisir une entreprise…</option>{businesses.map(b=><option key={b.id} value={b.id}>{b.name}</option>}</select><select value={planCode} onChange={e=>setPlanCode(e.target.value)}><option value="free">Free</option><option value="plus">Plus</option><option value="pro">Pro</option><option value="business">Business</option></select><select value={subscriptionStatus} onChange={e=>setSubscriptionStatus(e.target.value)}><option value="active">Actif</option><option value="trial">Essai</option><option value="past_due">En retard</option><option value="cancelled">Annulé</option><option value="expired">Expiré</option></select><button className="refresh" disabled={!selectedBusiness} onClick={()=>adminAction("/api/admin/subscriptions/"+selectedBusiness,"PUT",{plan_code:planCode,status:subscriptionStatus})}>Attribuer</button></div>
+        {!subscriptions.length?<p className="empty-state">Aucun abonnement configuré.</p>:<div className="table-scroll"><table className="business-table"><thead><tr><th>Entreprise</th><th>Plan</th><th>État</th><th>Début</th><th>Fin</th></tr></thead><tbody>{subscriptions.map(s=><tr key={s.business_id}><td>{s.business_name}</td><td>{s.plan_code}</td><td>{s.status}</td><td>{date(s.started_at)}</td><td>{date(s.ends_at||undefined)}</td></tr>)}</tbody></table></div>}
+      </section>
+      <section className="admin-panel"><div className="panel-title"><div><h2>Monétisation publicitaire</h2><p>Paramètres de placements; l’activation réelle nécessite les identifiants de fournisseur et les SDK mobiles.</p></div><span className="panel-icon">◉</span></div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}><input id="new-placement" placeholder="Placement (ex. home_banner)" /><input id="new-ad-unit" placeholder="ID unité publicitaire" /><button className="refresh" onClick={()=>adminAction("/api/admin/ads/"+((document.getElementById("new-placement") as HTMLInputElement)?.value||""),"PUT",{enabled:true,provider:"admob",ad_unit_id:(document.getElementById("new-ad-unit") as HTMLInputElement)?.value||null,frequency_cap:0})}>Ajouter / activer</button></div>
+        {!adSettings.length?<p className="empty-state">Aucun placement configuré.</p>:<div className="table-scroll"><table className="business-table"><thead><tr><th>Placement</th><th>Fournisseur</th><th>Unit ID</th><th>État</th><th>Cap</th><th>Action</th></tr></thead><tbody>{adSettings.map(a=><tr key={a.placement_key}><td>{a.placement_key}</td><td>{a.provider}</td><td>{a.ad_unit_id||"—"}</td><td>{a.enabled?"Activé":"Désactivé"}</td><td>{a.frequency_cap}</td><td><button className="refresh" onClick={()=>adminAction("/api/admin/ads/"+a.placement_key,"PUT",{enabled:!a.enabled,provider:a.provider,ad_unit_id:a.ad_unit_id,frequency_cap:a.frequency_cap})}>{a.enabled?"Désactiver":"Activer"}</button></td></tr>)}</tbody></table></div>}
+      </section>
+      <section className="admin-panel"><div className="panel-title"><div><h2>Paramètres plateforme</h2><p>Clé/valeur JSON pour configuration globale et future intégration des droits.</p></div><span className="panel-icon">⚙</span></div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-start"}}><input value={settingKey} onChange={e=>setSettingKey(e.target.value)} placeholder="Clé (ex. feature_flags)" /><textarea value={settingJson} onChange={e=>setSettingJson(e.target.value)} rows={3} placeholder="Valeur JSON"/><button className="refresh" onClick={()=>{try{const value=JSON.parse(settingJson);adminAction("/api/admin/settings/"+encodeURIComponent(settingKey),"PUT",value);}catch{alert("JSON invalide");}}}>Enregistrer</button></div>
+      </section>
+      <section className="admin-panel"><div className="panel-title"><div><h2>Journal d’audit plateforme</h2><p>Historique des actions administratives.</p></div><span className="panel-icon">▤</span></div>
+        {!auditEntries.length?<p className="empty-state">Aucune action administrative enregistrée.</p>:<div className="table-scroll"><table className="business-table"><thead><tr><th>Date</th><th>Administrateur</th><th>Action</th><th>Entité</th><th>ID</th></tr></thead><tbody>{auditEntries.map(a=><tr key={a.id}><td>{date(a.created_at)}</td><td>{a.actor_email}</td><td>{a.action}</td><td>{a.entity_type}</td><td>{a.entity_id||"—"}</td></tr>)}</tbody></table></div>}
       </section>
       <section className="admin-panel"><div className="panel-title"><div><h2>Fonctionnalités</h2><p>État du backend : connectées ou non implémentées.</p></div></div><div className="capability-list">{capabilities.map((item) => <article className="capability" key={item.name}><div><b>{item.name}</b><small>{item.detail}</small></div><span className={item.state === "Connecté" ? "cap-ready" : "cap-missing"}>{item.state}</span></article>)}</div></section>
       <footer>GeStock Admin · {status?.checkedAt ? new Date(status.checkedAt).toLocaleString("fr-FR") : "diagnostic en attente"}</footer>
