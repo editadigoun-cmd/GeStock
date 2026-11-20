@@ -12,6 +12,7 @@ import '../features/customers/customers_screen.dart';
 import '../features/suppliers/suppliers_screen.dart';
 import '../features/purchases/purchases_screen.dart';
 import '../features/expenses/expenses_screen.dart';
+import '../features/shell/more_screen.dart';
 import '../features/shell/app_shell.dart';
 import '../theme/gestock_theme.dart';
 
@@ -22,6 +23,7 @@ final appRouterProvider = Provider<GoRouter>((ref) => GoRouter(
     GoRoute(path: '/business/setup', builder: (_, __) => const BusinessSetupScreen()),
     ShellRoute(builder: (_, __, child) => AppShell(child: child), routes: [
       GoRoute(path: '/home', builder: (_, __) => const DashboardScreen()),
+      GoRoute(path: '/more', builder: (_, __) => const MoreScreen()),
       GoRoute(path: '/inventory', builder: (_, __) => const InventoryScreen()),
       GoRoute(path: '/products', builder: (_, __) => const ProductsScreen()),
       GoRoute(path: '/sales', builder: (_, __) => const SalesScreen()),
