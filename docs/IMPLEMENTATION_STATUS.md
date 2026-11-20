@@ -14,6 +14,8 @@
 - Mobile support request submission and request history.
 - Printable sale receipts (PDF, 80 mm roll format) from sales history, with native print/share dialog.
 - Business-role permission checks applied to products, sales, purchases, stock, employees, customers, suppliers, expenses, cash and offline-sync writes.
+- Warehouse transfers: warehouse creation, transfer validation, stock decrement/increment, paired movement history and transfer audit list/detail.
+- Manual stock movement endpoint is restricted to opening, adjustment and returns; it no longer accepts sale/purchase/transfer types directly. Negative stock is checked and rejected.
 - Offline synchronization status page, queued/failed/conflict counts, and retry action.
 - Physical stock count workflow; count variances are recorded as stock adjustments and queued for sync.
 - Automatic Android APK release build is enabled for main updates. Latest build is in progress.
@@ -28,8 +30,8 @@
 1. **Email delivery:** configure `RESEND_API_KEY`, `EMAIL_FROM`, and `APP_BASE_URL` as Worker secrets/vars, then test verification, invitation, and recovery emails with a real address.
 2. **Ads:** Ad placements are configurable in admin, but the mobile Ad SDK and valid AdMob app/unit IDs are not integrated/configured.
 3. **Subscriptions/payments:** admin can assign plans manually; purchase flow, provider verification, app-store billing and entitlements enforcement remain incomplete.
-4. **Role permissions:** employee membership/roles exist, but permission enforcement across every API workflow requires a full role-by-role audit.
-5. **Inventory:** physical count is implemented; warehouse transfer workflow and full multi-warehouse mobile UI remain to be implemented and tested.
+4. **Role permissions:** permission enforcement is being expanded and must be audited across all API endpoints, including edge cases and offline synchronization.
+5. **Inventory:** warehouse transfer UI and API are implemented; test concurrent transfers and negative-stock guard against D1 in production-like environment.
 6. **Receipts/printing:** PDF receipt generation and native print/share flow are implemented; physical printer testing and receipt customization remain.
 7. **Mobile validation:** physical Android testing is required for registration, email verification, password recovery, offline/online sync, stock count, sales, returns, cash sessions, purchasing and support.
 8. **iOS:** build, signing and App Store publication have not been completed.
