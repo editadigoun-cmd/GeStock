@@ -108,7 +108,7 @@ stockRoutes.post('/transfers', async c => {
     if(!level||Number(level.quantity)<item.quantity)return c.json({error:'INSUFFICIENT_STOCK',product_id:item.product_id,available:level?.quantity??0},409);
     parsedItems.push({productId:item.product_id,name:product.name,quantity:item.quantity});
   }
-  const statements:any[]=[
+  const statements:[any,...any[]]=[
     db.insert(stockTransfers).values({id:transferId,businessId:input.business_id,fromWarehouseId:input.from_warehouse_id,toWarehouseId:input.to_warehouse_id,transferNumber:number,status:'completed',note:input.note??null,createdBy:actor?.id??null,transferredAt:now,createdAt:now}),
     ...parsedItems.map(item=>db.insert(stockTransferItems).values({id:crypto.randomUUID(),transferId,productId:item.productId,productNameSnapshot:item.name,quantity:item.quantity})),
     ...parsedItems.flatMap(item=>[
