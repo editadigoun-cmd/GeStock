@@ -11,6 +11,7 @@ class MoreScreen extends StatelessWidget {
   _item(context,Icons.receipt_long_outlined,'Dépenses','Enregistrer et suivre les dépenses','/expenses'),
   _item(context,Icons.point_of_sale_outlined,'Gestion de caisse','Ouverture, clôture et écarts','/cash'),
   _item(context,Icons.bar_chart_rounded,'Rapports & statistiques','Ventes, dépenses, marge et stock','/reports'),
+  _item(context,Icons.sync_rounded,'Synchronisation','État des données, erreurs et relance','/sync'),
  ]),
  );
  Widget _item(BuildContext context,IconData icon,String title,String subtitle,String path)=>Card(child:ListTile(leading:CircleAvatar(child:Icon(icon)),title:Text(title,style:const TextStyle(fontWeight:FontWeight.bold)),subtitle:Text(subtitle),trailing:const Icon(Icons.chevron_right),onTap:()=>context.go(path)));

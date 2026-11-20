@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 class AppShell extends StatelessWidget {
   const AppShell({super.key, required this.child});
   final Widget child;
-  int _index(String path) => path.startsWith('/inventory') || path.startsWith('/products') ? 1 : path.startsWith('/sales') ? 2 : path.startsWith('/customers') ? 3 : path.startsWith('/more') || path.startsWith('/businesses') || path.startsWith('/suppliers') || path.startsWith('/purchases') || path.startsWith('/expenses') ? 4 : 0;
+  int _index(String path) => path.startsWith('/inventory') || path.startsWith('/products') ? 1 : path.startsWith('/sales') ? 2 : path.startsWith('/customers') ? 3 : path.startsWith('/more') || path.startsWith('/sync') || path.startsWith('/businesses') || path.startsWith('/suppliers') || path.startsWith('/purchases') || path.startsWith('/expenses') ? 4 : 0;
   @override
   Widget build(BuildContext context) {
     final path = GoRouterState.of(context).uri.path;
