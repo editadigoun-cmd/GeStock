@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:dio/dio.dart';
+import 'auth_repository.dart';
 import 'package:uuid/uuid.dart';
 import '../local/gestock_database.dart';
 
@@ -6,6 +8,19 @@ class CashRepository {
   CashRepository(this.db);
   final GeStockDatabase db;final _uuid=const Uuid();
 
+  Future<void> pullCloud(String businessId)async{
+    final token=await auth.getAccessToken();final response=await _dio.get('/v1/cash/sessions',queryParameters:{'business_id':businessId},options:Options(headers:{'Authorization':'Bearer $token'}));
+    if(response.data is! Map||response.data['data'] is! List)throw StateError('Historique de caisse invalide.');
+    final d=await db.database;final now=DateTime.now().toUtc().toIso8601String();
+    await d.transaction((txn)async{for(final raw in (response.data['data'] as List).whereType<Map>()){
+      final x=Map<String,Object?>.from(raw);final id=x['id']?.toString();if(id==null)continue;
+      final pending=await txn.query('outbox',where:"entity_type='cash_session' AND entity_id=? AND status IN ('queued','failed','conflict')",whereArgs:[id],limit:1);if(pending.isNotEmpty)continue;
+      final registerId=x['registerId']?.toString()??x['register_id']?.toString();if(registerId==null)continue;
+      final register=await txn.query('cash_registers',where:'id=?',whereArgs:[registerId],limit:1);if(register.isEmpty)await txn.insert('cash_registers',{'id':registerId,'business_id':businessId,'name':'Caisse principale','is_active':1,'created_at':now});
+      final values={'id':id,'business_id':businessId,'register_id':registerId,'opened_by':x['openedBy']??x['opened_by'],'closed_by':x['closedBy']??x['closed_by'],'opening_amount':x['openingAmount']??x['opening_amount']??0,'closing_amount':x['closingAmount']??x['closing_amount'],'expected_amount':x['expectedAmount']??x['expected_amount'],'opened_at':x['openedAt']??x['opened_at']??now,'closed_at':x['closedAt']??x['closed_at'],'status':x['status']??'open','created_at':x['createdAt']??x['created_at']??now,'updated_at':now,'sync_state':'synced'};
+      final local=await txn.query('cash_sessions',where:'id=?',whereArgs:[id],limit:1);if(local.isEmpty)await txn.insert('cash_sessions',values);else await txn.update('cash_sessions',values,where:'id=?',whereArgs:[id]);
+    }});
+  }
   Future<Map<String,Object?>?> activeSession(String businessId)async{final d=await db.database;final rows=await d.query('cash_sessions',where:"business_id=? AND status='open'",whereArgs:[businessId],orderBy:'opened_at DESC',limit:1);return rows.isEmpty?null:rows.first;}
 
   Future<List<Map<String,Object?>>> list(String businessId)async{final d=await db.database;return d.query('cash_sessions',where:'business_id=?',whereArgs:[businessId],orderBy:'opened_at DESC',limit:100);}
