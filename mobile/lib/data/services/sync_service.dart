@@ -50,7 +50,7 @@ class SyncService {
 
   Future<bool> retryFailed() async {
     final db = await database.database;
-    await db.update('outbox', {'status': 'queued'}, where: "status IN ('failed','conflict')");
+    await db.update('outbox', {'status': 'queued', 'last_error': null}, where: "status IN ('failed','conflict')");
     return syncPending();
   }
 
@@ -125,7 +125,7 @@ class SyncService {
           allApplied = false;
           final attempts = (pending.firstWhere((row) => row['id'] == operationId, orElse: () => {'attempts': 0})['attempts'] as int? ?? 0) + 1;
           final status = result['status'] == 'rejected' ? 'failed' : 'conflict';
-          await db.update('outbox', {'attempts': attempts, 'status': status}, where: 'id = ?', whereArgs: [operationId]);
+          await db.update('outbox', {'attempts': attempts, 'status': status, 'last_error': result['error']?.toString() ?? result['message']?.toString() ?? 'Réponse serveur: ${result['status']}'}, where: 'id = ?', whereArgs: [operationId]);
           if (operationType == 'business') {
             await db.update('businesses', {'sync_state': status}, where: 'id = ?', whereArgs: [operationRow['entity_id']]);
           } else if (operationType == 'product') {
