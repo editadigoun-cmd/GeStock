@@ -128,8 +128,8 @@ class SyncService {
           } else if (operationType == 'supplier') {
             await db.update('suppliers', {'sync_state': status}, where: 'id = ?', whereArgs: [operationRow['entity_id']]);
           } else if (operationType == 'sale') {
-            await db.update('sales', {'sync_state': status}, where: 'id = ?', whereArgs: [operationId]);
-            await db.update('stock_movements', {'sync_state': status}, where: 'source_type = ? AND source_id = ?', whereArgs: ['sale', operationId]);
+            await db.update('sales', {'sync_state': status}, where: 'id = ?', whereArgs: [operationRow['entity_id']]);
+            await db.update('stock_movements', {'sync_state': status}, where: 'source_type = ? AND source_id = ?', whereArgs: ['sale', operationRow['entity_id']]);
           }
         }
       }
