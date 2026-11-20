@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../services/db.js';
-import { appUsers, businesses, businessMemberships, organizationMemberships, organizations, products, customers, suppliers, purchases, purchaseItems, stockMovements, stockLevels, syncDevices, syncOperations, warehouses } from '../schema.js';
+import { appUsers, businesses, businessMemberships, organizationMemberships, organizations, products, customers, suppliers, purchases, purchaseItems, expenses, stockMovements, stockLevels, syncDevices, syncOperations, warehouses } from '../schema.js';
 import { saleInputSchema, createSaleTransaction } from '../services/sales.js';
 import type { AppEnv } from '../middleware/auth.js';
 
@@ -39,7 +39,7 @@ syncRoutes.post('/devices/register', async (c) => {
 const operationSchema = z.object({
   id: z.string().uuid(),
   business_id: z.string().uuid(),
-  entity_type: z.enum(['business', 'product', 'customer', 'supplier', 'purchase', 'stock_movement', 'sale']),
+  entity_type: z.enum(['business', 'product', 'customer', 'supplier', 'purchase', 'expense', 'stock_movement', 'sale']),
   entity_id: z.string().uuid(),
   operation: z.string().min(1).max(40),
   payload: z.record(z.string(), z.unknown()),
@@ -119,6 +119,21 @@ async function applyOperation(authSubject: string, deviceId: string, op: z.infer
     const result = { id: op.entity_id, synced: true };
     const outcome = await createSaleTransaction(user.id, parsedSale.data, operationRecord(deviceId, op, result));
     return { status: 'applied', result: { ...result, duplicate: outcome.duplicate }, duplicate: outcome.duplicate };
+  }
+
+  if (op.entity_type === 'expense') {
+    const p=op.payload; const expenseId=String(p.id??op.entity_id);
+    const category=String(p.category??'').trim(); const description=String(p.description??'').trim();
+    const amount=Number(p.amount); const currencyCode=String(p.currency_code??'');
+    if(expenseId!==op.entity_id||String(p.business_id??op.business_id)!==op.business_id||!category||!description||!Number.isFinite(amount)||amount<=0||!/^[A-Z]{3}$/.test(currencyCode))throw new Error('INVALID_EXPENSE_PAYLOAD');
+    const paidAt=p.paid_at?String(p.paid_at):new Date().toISOString();
+    const createdAt=p.created_at?String(p.created_at):new Date().toISOString();
+    const [existing]=await db.select({id:expenses.id,businessId:expenses.businessId}).from(expenses).where(eq(expenses.id,expenseId)).limit(1);
+    if(existing&&existing.businessId!==op.business_id)throw new Error('EXPENSE_BUSINESS_MISMATCH');
+    const result={id:expenseId,synced:true};
+    const write=existing?db.update(expenses).set({category,description,amount,currencyCode,paidAt,paymentMethod:p.payment_method?String(p.payment_method):null}).where(eq(expenses.id,expenseId)):db.insert(expenses).values({id:expenseId,businessId:op.business_id,category,description,amount,currencyCode,paidAt,paymentMethod:p.payment_method?String(p.payment_method):null,createdBy:user.id,createdAt});
+    await db.batch([write,db.insert(syncOperations).values(operationRecord(deviceId,op,result))]);
+    return {status:'applied',result,duplicate:false};
   }
 
   if (op.entity_type === 'purchase') {
