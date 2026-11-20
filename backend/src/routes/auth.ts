@@ -1,4 +1,4 @@
-import {Hono} from 'hono';import {z} from 'zod';import {hashPassword,verifyPassword,createSessionToken,hashSessionToken} from '../services/password.js';import type {AppEnv} from '../middleware/auth.js';
+import {Hono} from 'hono';import {z} from 'zod';import {hashPassword,verifyPassword,createSessionToken,hashSessionToken} from '../services/password.js';import {sendTransactionalEmail,emailShell} from '../services/email.js';import type {AppEnv} from '../middleware/auth.js';
 export const authRoutes=new Hono<AppEnv>();const loginSchema=z.object({email:z.string().email().max(254),password:z.string().min(8).max(128)});const registerSchema=loginSchema.extend({name:z.string().trim().min(2).max(120)});const now=()=>new Date().toISOString();
 async function limit(db:D1Database,key:string,max:number,windowMs:number){const staleCutoff=new Date(Date.now()-24*60*60*1000).toISOString();await db.prepare('DELETE FROM auth_rate_limits WHERE last_attempt_at<?').bind(staleCutoff).run();const digest=await hashSessionToken(key),t=now(),cutoff=new Date(Date.now()-windowMs).toISOString();await db.prepare('INSERT INTO auth_rate_limits(key_hash,window_started_at,attempts,last_attempt_at) VALUES(?,?,1,?) ON CONFLICT(key_hash) DO UPDATE SET attempts=CASE WHEN window_started_at<? THEN 1 ELSE attempts+1 END,window_started_at=CASE WHEN window_started_at<? THEN ? ELSE window_started_at END,last_attempt_at=excluded.last_attempt_at').bind(digest,t,t,cutoff,cutoff,t).run();const r=await db.prepare('SELECT attempts,window_started_at FROM auth_rate_limits WHERE key_hash=?').bind(digest).first<any>();return{blocked:(r?.attempts||0)>max,hash:digest,resetAt:new Date(new Date(r?.window_started_at||t).getTime()+windowMs).toISOString()};}
 async function newSession(db:D1Database,userId:string){const token=createSessionToken(),digest=await hashSessionToken(token),expiry=new Date(Date.now()+30*86400000).toISOString();await db.prepare('INSERT INTO auth_sessions(id,user_id,token_hash,expires_at,created_at,last_used_at) VALUES(?,?,?,?,?,?)').bind(crypto.randomUUID(),userId,digest,expiry,now(),now()).run();return{token,expires_at:expiry};}function user(r:any){return{id:r.id,email:r.email,name:r.display_name,email_verified:r.email_verified===1};}
@@ -19,3 +19,63 @@ authRoutes.post('/login',async c=>{const p=loginSchema.safeParse(await c.req.jso
 authRoutes.get('/me',async c=>{const t=c.req.header('Authorization')?.slice(7);if(!t)return c.json({error:'UNAUTHORIZED'},401);const h=await hashSessionToken(t),r=await c.env.DB.prepare('SELECT u.id,u.email,u.display_name,u.email_verified FROM auth_sessions s JOIN app_users u ON u.id=s.user_id WHERE s.token_hash=? AND s.revoked_at IS NULL AND s.expires_at>? LIMIT 1').bind(h,now()).first<any>();if(!r)return c.json({error:'SESSION_EXPIRED'},401);await c.env.DB.prepare('UPDATE auth_sessions SET last_used_at=? WHERE token_hash=?').bind(now(),h).run();return c.json({data:{user:user(r)}});});
 authRoutes.post('/logout',async c=>{const t=c.req.header('Authorization')?.slice(7);if(t){const h=await hashSessionToken(t);await c.env.DB.prepare('UPDATE auth_sessions SET revoked_at=? WHERE token_hash=? AND revoked_at IS NULL').bind(now(),h).run();}return c.json({ok:true});});
 authRoutes.post('/change-password',async c=>{const t=c.req.header('Authorization')?.slice(7);if(!t)return c.json({error:'UNAUTHORIZED'},401);const p=z.object({currentPassword:z.string().min(8).max(128),newPassword:z.string().min(8).max(128)}).safeParse(await c.req.json().catch(()=>null));if(!p.success)return c.json({error:'VALIDATION_ERROR'},422);const h=await hashSessionToken(t),s=await c.env.DB.prepare('SELECT s.id,s.user_id,u.password_hash FROM auth_sessions s JOIN app_users u ON u.id=s.user_id WHERE s.token_hash=? AND s.revoked_at IS NULL AND s.expires_at>? LIMIT 1').bind(h,now()).first<any>();if(!s?.password_hash||!(await verifyPassword(p.data.currentPassword,s.password_hash)))return c.json({error:'INVALID_CURRENT_PASSWORD'},401);const ph=await hashPassword(p.data.newPassword),n=now();await c.env.DB.batch([c.env.DB.prepare('UPDATE app_users SET password_hash=?,updated_at=? WHERE id=?').bind(ph,n,s.user_id),c.env.DB.prepare('UPDATE auth_sessions SET revoked_at=? WHERE user_id=? AND id<>? AND revoked_at IS NULL').bind(n,s.user_id,s.id)]);return c.json({ok:true});});
+
+const tokenSchema=z.object({token:z.string().min(24).max(256)});
+async function issueEmailToken(db:D1Database,userId:string,type:'verify_email'|'reset_password'){
+ const token=crypto.randomUUID()+crypto.randomUUID(),hash=await hashSessionToken(token),created=now(),expires=new Date(Date.now()+(type==='verify_email'?24:1)*60*60*1000).toISOString();
+ await db.prepare('UPDATE auth_email_tokens SET used_at=? WHERE user_id=? AND token_type=? AND used_at IS NULL').bind(created,userId,type).run();
+ await db.prepare('INSERT INTO auth_email_tokens(id,user_id,token_hash,token_type,expires_at,created_at) VALUES(?,?,?,?,?,?)').bind(crypto.randomUUID(),userId,hash,type,expires,created).run();
+ return {token,expires};
+}
+authRoutes.post('/forgot-password',async c=>{
+ const p=z.object({email:z.string().email().max(254)}).safeParse(await c.req.json().catch(()=>null));if(!p.success)return c.json({error:'VALIDATION_ERROR'},422);
+ const ip=c.req.header('CF-Connecting-IP')||'unknown';const rate=await limit(c.env.DB,'forgot:'+ip,5,3600000);if(rate.blocked)return c.json({data:{message:'Si ce compte existe, un e-mail sera envoyé.'}},200);
+ const email=p.data.email.trim().toLowerCase(),u=await c.env.DB.prepare("SELECT id,email,status FROM app_users WHERE email=? COLLATE NOCASE LIMIT 1").bind(email).first<any>();
+ if(u&&u.status!=='suspended'&&c.env.RESEND_API_KEY&&c.env.EMAIL_FROM){
+  const issued=await issueEmailToken(c.env.DB,u.id,'reset_password'),base=(c.env.APP_BASE_URL||'https://gestock-api.ccds22431.workers.dev').replace(/\/$/,'');
+  const url=base+'/auth/reset-password-page?token='+encodeURIComponent(issued.token);
+  const html=emailShell('Réinitialiser votre mot de passe','<p>Vous avez demandé la réinitialisation du mot de passe GeStock.</p><p><a href="'+url+'" style="display:inline-block;padding:13px 20px;background:#146c43;color:#fff;text-decoration:none;border-radius:8px">Choisir un nouveau mot de passe</a></p><p>Ce lien expire dans une heure.</p>');
+  const sent=await sendTransactionalEmail(c.env,u.email, 'Réinitialisation du mot de passe GeStock',html);
+  if(!sent.ok)console.error('Password reset email delivery failed');
+ }
+ return c.json({data:{message:'Si ce compte existe, un e-mail sera envoyé.'}});
+});
+authRoutes.post('/reset-password',async c=>{
+ const p=z.object({token:z.string().min(24).max(256),password:z.string().min(8).max(128)}).safeParse(await c.req.json().catch(()=>null));if(!p.success)return c.json({error:'VALIDATION_ERROR',message:'Le lien et un mot de passe de 8 caractères minimum sont requis.'},422);
+ const digest=await hashSessionToken(p.data.token),row=await c.env.DB.prepare("SELECT id,user_id FROM auth_email_tokens WHERE token_hash=? AND token_type='reset_password' AND used_at IS NULL AND expires_at>? LIMIT 1").bind(digest,now()).first<any>();
+ if(!row)return c.json({error:'RESET_TOKEN_INVALID_OR_EXPIRED'},400);
+ const passwordHash=await hashPassword(p.data.password),t=now();
+ await c.env.DB.batch([c.env.DB.prepare('UPDATE app_users SET password_hash=?,updated_at=? WHERE id=?').bind(passwordHash,t,row.user_id),c.env.DB.prepare('UPDATE auth_email_tokens SET used_at=? WHERE id=?').bind(t,row.id),c.env.DB.prepare('UPDATE auth_sessions SET revoked_at=? WHERE user_id=? AND revoked_at IS NULL').bind(t,row.user_id)]);
+ return c.json({ok:true,message:'Mot de passe réinitialisé. Connectez-vous avec votre nouveau mot de passe.'});
+});
+authRoutes.post('/resend-verification',async c=>{
+ const token=c.req.header('Authorization')?.slice(7);if(!token)return c.json({error:'UNAUTHORIZED'},401);
+ const digest=await hashSessionToken(token),u=await c.env.DB.prepare('SELECT u.id,u.email,u.email_verified FROM auth_sessions s JOIN app_users u ON u.id=s.user_id WHERE s.token_hash=? AND s.revoked_at IS NULL AND s.expires_at>? LIMIT 1').bind(digest,now()).first<any>();
+ if(!u)return c.json({error:'SESSION_EXPIRED'},401);if(u.email_verified===1)return c.json({ok:true,message:'Adresse déjà vérifiée.'});
+ if(!c.env.RESEND_API_KEY||!c.env.EMAIL_FROM)return c.json({error:'EMAIL_NOT_CONFIGURED'},503);
+ const issued=await issueEmailToken(c.env.DB,u.id,'verify_email'),base=(c.env.APP_BASE_URL||'https://gestock-api.ccds22431.workers.dev').replace(/\/$/,'');
+ const url=base+'/auth/verify-email-page?token='+encodeURIComponent(issued.token);
+ const html=emailShell('Vérifiez votre adresse e-mail','<p>Confirmez votre adresse e-mail pour sécuriser votre compte GeStock.</p><p><a href="'+url+'" style="display:inline-block;padding:13px 20px;background:#146c43;color:#fff;text-decoration:none;border-radius:8px">Vérifier mon e-mail</a></p><p>Ce lien expire dans 24 heures.</p>');
+ const sent=await sendTransactionalEmail(c.env,u.email,'Vérification de votre adresse GeStock',html);if(!sent.ok)return c.json({error:'EMAIL_SEND_FAILED'},502);return c.json({ok:true});
+});
+authRoutes.post('/verify-email',async c=>{
+ const p=tokenSchema.safeParse(await c.req.json().catch(()=>null));if(!p.success)return c.json({error:'VALIDATION_ERROR'},422);
+ const digest=await hashSessionToken(p.data.token),row=await c.env.DB.prepare("SELECT id,user_id FROM auth_email_tokens WHERE token_hash=? AND token_type='verify_email' AND used_at IS NULL AND expires_at>? LIMIT 1").bind(digest,now()).first<any>();
+ if(!row)return c.json({error:'VERIFY_TOKEN_INVALID_OR_EXPIRED'},400);const t=now();
+ await c.env.DB.batch([c.env.DB.prepare('UPDATE app_users SET email_verified=1,updated_at=? WHERE id=?').bind(t,row.user_id),c.env.DB.prepare('UPDATE auth_email_tokens SET used_at=? WHERE id=?').bind(t,row.id)]);
+ return c.json({ok:true,message:'Adresse e-mail vérifiée.'});
+});
+authRoutes.get('/verify-email-page',async c=>{
+ const token=c.req.query('token')||'';
+ if(!token||token.length>256)return c.html('<h2>Lien de vérification invalide.</h2>',400);
+ const digest=await hashSessionToken(token),row=await c.env.DB.prepare("SELECT id,user_id FROM auth_email_tokens WHERE token_hash=? AND token_type='verify_email' AND used_at IS NULL AND expires_at>? LIMIT 1").bind(digest,now()).first<any>();
+ if(!row)return c.html('<h2>Ce lien est invalide ou expiré.</h2>',400);const t=now();
+ await c.env.DB.batch([c.env.DB.prepare('UPDATE app_users SET email_verified=1,updated_at=? WHERE id=?').bind(t,row.user_id),c.env.DB.prepare('UPDATE auth_email_tokens SET used_at=? WHERE id=?').bind(t,row.id)]);
+ return c.html('<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GeStock — Vérification</title><body style="font-family:system-ui;background:#f4f8f5;padding:24px"><main style="max-width:480px;margin:10vh auto;background:white;padding:28px;border-radius:18px"><h2 style="color:#146c43">Adresse vérifiée ✓</h2><p>Votre adresse e-mail est maintenant vérifiée. Vous pouvez revenir dans GeStock.</p></main></body></html>');
+});
+authRoutes.get('/reset-password-page',async c=>{
+ const token=c.req.query('token')||'';if(!token||token.length>256)return c.html('<h2>Lien invalide.</h2>',400);
+ const digest=await hashSessionToken(token),row=await c.env.DB.prepare("SELECT id FROM auth_email_tokens WHERE token_hash=? AND token_type='reset_password' AND used_at IS NULL AND expires_at>? LIMIT 1").bind(digest,now()).first();
+ if(!row)return c.html('<h2>Ce lien est invalide ou expiré.</h2>',400);
+ return c.html(`<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GeStock — Nouveau mot de passe</title><body style="font-family:system-ui;background:#f4f8f5;padding:24px;color:#17372c"><main style="max-width:480px;margin:8vh auto;background:white;padding:28px;border-radius:18px"><h2>Nouveau mot de passe</h2><form id="f"><input id="p" type="password" minlength="8" required placeholder="8 caractères minimum" style="width:100%;padding:13px;margin:8px 0"><input id="c" type="password" minlength="8" required placeholder="Confirmer" style="width:100%;padding:13px;margin:8px 0"><button style="width:100%;padding:14px;background:#146c43;color:white;border:0;border-radius:8px">Réinitialiser</button></form><p id="m"></p><script>document.getElementById('f').onsubmit=async e=>{e.preventDefault();const p=document.getElementById('p').value,c=document.getElementById('c').value,m=document.getElementById('m');if(p!==c){m.textContent='Les mots de passe ne correspondent pas.';return;}const r=await fetch('/auth/reset-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:${JSON.stringify(token)},password:p})});const d=await r.json();m.textContent=r.ok?'Mot de passe changé. Vous pouvez vous connecter dans GeStock.':(d.message||d.error||'Erreur');}</script></main></body></html>`);
+});
