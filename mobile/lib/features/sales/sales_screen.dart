@@ -148,18 +148,18 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
         const SizedBox(height: 12),
         ListTile(leading: const Icon(Icons.payments_outlined), title: const Text('Espèces'), subtitle: const Text('Paiement enregistré'), onTap: () => Navigator.pop(context, 'cash')),
         ListTile(leading: const Icon(Icons.phone_android_rounded), title: const Text('Mobile Money'), subtitle: const Text('En attente de confirmation du prestataire'), onTap: () => Navigator.pop(context, 'mobile_money')),
-        ListTile(leading: const Icon(Icons.credit_card_rounded), title: const Text('Carte'), subtitle: const Text('En attente de confirmation du prestataire'), onTap: () => Navigator.pop(context, 'card')),
+        ListTile(leading: const Icon(Icons.credit_card_rounded), title: const Text('Carte'), subtitle: const Text('En attente de confirmation du prestataire'), onTap: () => Navigator.pop(context, 'card')),\n        ListTile(leading: const Icon(Icons.account_balance_wallet_outlined), title: const Text('Crédit client'), subtitle: const Text('Paiement partiel ou à terme'), onTap: () => Navigator.pop(context, 'credit')),
       ]),
     )));
     if (method == null) return;
     setState(() => saving = true);
     try {
-      await ref.read(salesRepositoryProvider).createSale(businessId: business['id'] as String, currencyCode: business['currency_code']?.toString() ?? 'XOF', quantities: Map.of(cart), paymentMethod: method, customerId: selectedCustomerId);
+      await ref.read(salesRepositoryProvider).createSale(businessId: business['id'] as String, currencyCode: business['currency_code']?.toString() ?? 'XOF', quantities: Map.of(cart), paymentMethod: method, customerId: selectedCustomerId, paymentAmount: creditPaid);
       cart.clear();
       try { await ref.read(syncServiceProvider).syncPending(); } catch (_) {}
       if (mounted) {
         await _refresh();
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(method == 'cash' ? 'Vente enregistrée.' : 'Vente enregistrée · paiement à confirmer.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(method == 'credit' ? 'Vente enregistrée · crédit client.' : method == 'cash' ? 'Vente enregistrée.' : 'Vente enregistrée · paiement à confirmer.')));
       }
     } catch (error) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString().replaceFirst('Bad state: ', ''))));
