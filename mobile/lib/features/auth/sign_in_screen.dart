@@ -33,11 +33,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   }
 
   Future<void> _restoreSession() async {
-    final auth=ref.read(authRepositoryProvider);
-    final pending=await auth.isVerificationPending();
-    if(!mounted)return;
-    if(pending){setState(()=>_verificationPending=true);return;}
-    final valid = await auth.hasValidSession();
+    final valid = await ref.read(authRepositoryProvider).hasValidSession();
     if (!mounted || !valid) return;
     final businesses = await ref.read(businessRepositoryProvider).list();
     if (!mounted) return;
@@ -214,8 +210,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 10),
-                                if (!_isSignUp) TextButton(onPressed:_busy?null:_forgotPassword,child:const Text('Mot de passe oublié ?')),
-                                if (_verificationPending) TextButton(onPressed:_busy?null:_resendVerification,child:const Text('Renvoyer l’e-mail de vérification')),
+                                if (!_isSignUp) TextButton(onPressed: _busy ? null : _forgotPassword, child: const Text('Mot de passe oublié ?')),
+                                if (_verificationPending) TextButton(onPressed: _busy ? null : _resendVerification, child: const Text('Renvoyer l’e-mail de vérification')),
                                 Wrap(
                                   alignment: WrapAlignment.center,
                                   crossAxisAlignment: WrapCrossAlignment.center,
@@ -265,23 +261,32 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       );
 
   Future<void> _forgotPassword() async {
-    final email=_email.text.trim();
-    if(!RegExp(r'^[^\\s@]+@[^\\s@]+\\.[^\\s@]+
+    final email = _email.text.trim();
+    if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
     setState(() => _busy = true);
     try {
       final auth = ref.read(authRepositoryProvider);
       if (_isSignUp) {
-        final verificationRequired=await auth.signUp(_name.text.trim(), _email.text.trim(), _password.text);
+        final verificationRequired = await auth.signUp(_name.text.trim(), _email.text.trim(), _password.text);
         if (mounted) {
-          if(verificationRequired){setState(()=>_verificationPending=true);_isSignUp=false;_showError('Compte créé. Consultez votre e-mail et vérifiez votre adresse avant de continuer.');}
-          else{context.go('/business/setup');}
+          if (verificationRequired) {
+            setState(() => _verificationPending = true);
+            _isSignUp = false;
+            _showError('Compte créé. Consultez votre e-mail et vérifiez votre adresse avant de continuer.');
+          } else {
+            context.go('/business/setup');
+          }
         }
       } else {
-        final verificationRequired=await auth.signIn(_email.text.trim(), _password.text);
-        if(verificationRequired){if(mounted){setState(()=>_verificationPending=true);_showError('Vérifiez votre adresse e-mail avant de continuer.');}}
-        else{
+        final verificationRequired = await auth.signIn(_email.text.trim(), _password.text);
+        if (verificationRequired) {
+          if (mounted) {
+            setState(() => _verificationPending = true);
+            _showError('Vérifiez votre adresse e-mail avant de continuer.');
+          }
+        } else {
           final businesses = await ref.read(businessRepositoryProvider).list();
           if (mounted) context.go(businesses.isEmpty ? '/business/setup' : '/home');
         }
@@ -308,15 +313,31 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     );
   }
 }
-).hasMatch(email)){_showError('Saisissez votre adresse e-mail.');return;}
-    setState(()=>_busy=true);
-    try{await ref.read(authRepositoryProvider).requestPasswordReset(email);if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Si ce compte existe, un e-mail de réinitialisation sera envoyé.')));}
-    catch(e){_showError(_friendlyError(e));}finally{if(mounted)setState(()=>_busy=false);}
+).hasMatch(email)) {
+      _showError('Saisissez votre adresse e-mail.');
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      await ref.read(authRepositoryProvider).requestPasswordReset(email);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Si ce compte existe, un e-mail de réinitialisation sera envoyé.')));
+    } catch (error) {
+      _showError(_friendlyError(error));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
+
   Future<void> _resendVerification() async {
-    setState(()=>_busy=true);
-    try{await ref.read(authRepositoryProvider).resendVerification();if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('E-mail de vérification renvoyé.')));}
-    catch(e){_showError(_friendlyError(e));}finally{if(mounted)setState(()=>_busy=false);}
+    setState(() => _busy = true);
+    try {
+      await ref.read(authRepositoryProvider).resendVerification();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('E-mail de vérification renvoyé.')));
+    } catch (error) {
+      _showError(_friendlyError(error));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _submit() async {
