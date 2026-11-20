@@ -108,7 +108,7 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
               TextField(controller: address, decoration: const InputDecoration(labelText: 'Adresse')),
               TextField(controller: notes, maxLines: 2, decoration: const InputDecoration(labelText: 'Notes')),
               const SizedBox(height: 12),
-              SizedBox(width: double.infinity, child: FilledButton(onPressed: () => Navigator.pop(sheetContext, true), child: const Text('Enregistrer')),
+              SizedBox(width: double.infinity, child: FilledButton(onPressed: () => Navigator.pop(sheetContext, true), child: const Text('Enregistrer'))),
             ]),
           ),
         ),
