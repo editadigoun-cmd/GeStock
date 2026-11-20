@@ -134,11 +134,44 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
           leading: Icon(sale['sync_state'] == 'synced' ? Icons.cloud_done_rounded : Icons.cloud_upload_outlined, color: sale['sync_state'] == 'synced' ? GeStockColors.deepEmerald : GeStockColors.amber),
           title: Text(sale['sale_number'].toString(), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
           subtitle: Text('${DateTime.tryParse(sale['sold_at'].toString())?.toLocal().toString().substring(0,16) ?? ''} · ${sale['payment_method']} · ${sale['sync_state']}', style: const TextStyle(fontSize: 10)),
-          trailing: Text(_money((sale['total'] as num).toDouble(), sale['currency_code']?.toString() ?? 'XOF'), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11)),
+          trailing: Row(mainAxisSize: MainAxisSize.min, children: [Text(_money((sale['total'] as num).toDouble(), sale['currency_code']?.toString() ?? 'XOF'), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11)), IconButton(tooltip: 'Retour / remboursement', icon: const Icon(Icons.assignment_return_outlined), onPressed: saving ? null : () => _returnSale(businessId, sale))]),
         ))),
       ]);
     },
   );
+
+  Future<void> _returnSale(String businessId,Map<String,Object?> sale) async {
+    final db=await ref.read(databaseProvider).database;
+    final saleItems=await db.query('sale_items',where:'sale_id=?',whereArgs:[sale['id']]);
+    final already=await db.query('sale_return_items',where:'sale_item_id IN (SELECT id FROM sale_items WHERE sale_id=?)',whereArgs:[sale['id']]);
+    final returnedByItem=<String,double>{};
+    for(final r in already){final id=r['sale_item_id'].toString();returnedByItem[id]=(returnedByItem[id]??0)+(r['quantity'] as num).toDouble();}
+    if(saleItems.isEmpty){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Détails de vente introuvables.')));return;}
+    final controllers=<String,TextEditingController>{};
+    for(final item in saleItems){controllers[item['id'].toString()]=TextEditingController(text:'0');}
+    final reason=TextEditingController();String refundMethod='cash';
+    final result=await showDialog<Map<String,Object?>>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,setDialog)=>AlertDialog(
+      title:Text('Retour · ${sale['sale_number']}'),
+      content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
+        ...saleItems.map((item){final id=item['id'].toString();final sold=(item['quantity'] as num).toDouble();final remaining=sold-(returnedByItem[id]??0);return Padding(padding:const EdgeInsets.only(bottom:10),child:Row(children:[Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(item['product_name_snapshot'].toString(),style:const TextStyle(fontWeight:FontWeight.w700)),Text('Vendu ${sold.toStringAsFixed(2)} · Restant ${remaining.toStringAsFixed(2)}',style:const TextStyle(fontSize:11))])),SizedBox(width:90,child:TextField(controller:controllers[id],keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'Qté retour')))]));}),
+        TextField(controller:reason,decoration:const InputDecoration(labelText:'Motif obligatoire')),
+        DropdownButtonFormField<String>(value:refundMethod,decoration:const InputDecoration(labelText:'Remboursement'),items:const ['cash','mobile_money','card','bank_transfer','store_credit','other'].map((m)=>DropdownMenuItem(value:m,child:Text({'cash':'Espèces','mobile_money':'Mobile Money','card':'Carte','bank_transfer':'Virement','store_credit':'Avoir','other':'Autre'}[m]!))).toList(),onChanged:(v)=>setDialog(()=>refundMethod=v??'cash')),
+      ])),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('Annuler')),FilledButton(onPressed:()=>Navigator.pop(ctx,{'quantities':controllers.map((id,controller)=>MapEntry(id,double.tryParse(controller.text.replaceAll(',','.'))??0)),'reason':reason.text,'method':refundMethod}),child:const Text('Valider le retour'))],
+    )));
+    if(result==null){for(final c in controllers.values)c.dispose();reason.dispose();return;}
+    final quantities=(result['quantities'] as Map).cast<String,double>().entries.where((e)=>e.value>0).fold<Map<String,double>>({},(m,e){m[e.key]=e.value;return m;});
+    for(final c in controllers.values)c.dispose();reason.dispose();
+    if(quantities.isEmpty){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Aucune quantité à retourner.')));return;}
+    setState(()=>saving=true);
+    try{
+      await ref.read(saleReturnRepositoryProvider).createReturn(businessId:businessId,saleId:sale['id'].toString(),reason:result['reason'].toString(),refundMethod:result['method'].toString(),quantities:quantities);
+      try{await ref.read(syncServiceProvider).syncPending();}catch(_){}
+      await _refresh();
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Retour enregistré. Le stock a été réintégré si applicable.')));
+    }catch(error){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(error.toString().replaceFirst('Bad state: ',''))));}
+    finally{if(mounted)setState(()=>saving=false);}
+  }
 
   Future<void> _checkout(Map<String, Object?> business, dynamic totals) async {
     final method = await showModalBottomSheet<String>(
