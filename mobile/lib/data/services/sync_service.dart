@@ -72,7 +72,7 @@ class SyncService {
       final pending = await db.rawQuery("""
         SELECT id,business_id,entity_type,entity_id,operation,payload,created_at,attempts
         FROM outbox WHERE status='queued'
-        ORDER BY CASE entity_type WHEN 'business' THEN 0 WHEN 'product' THEN 1 WHEN 'stock_movement' THEN 2 WHEN 'customer' THEN 3 WHEN 'supplier' THEN 4 WHEN 'sale' THEN 5 ELSE 6 END,
+        ORDER BY CASE entity_type WHEN 'business' THEN 0 WHEN 'product' THEN 1 WHEN 'stock_movement' THEN 2 WHEN 'customer' THEN 3 WHEN 'supplier' THEN 4 WHEN 'purchase' THEN 5 WHEN 'sale' THEN 6 ELSE 7 END,
         created_at ASC,rowid ASC LIMIT 30
       """);
       if (pending.isEmpty) break;
